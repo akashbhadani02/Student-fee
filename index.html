@@ -366,6 +366,8 @@
       background: #dff7ea;
       color: #087443
     }
+    .credential-cell{display:flex;align-items:center;gap:6px;flex-wrap:wrap}.credential-cell code{font-size:13px;background:var(--soft);padding:3px 6px;border-radius:5px}.mini-btn{padding:3px 7px;font-size:11px;border:1px solid var(--line);border-radius:6px;background:var(--panel);cursor:pointer}
+
 
     /* Page password lock */
     #pagePasswordLock {
@@ -878,7 +880,7 @@
       </div>
     </section>
 
-    <section id="branches" class="page main-only"><div class="panel"><div class="toolbar"><button class="primary" onclick="addBranchAccess()">+ Add Branch & Login</button><button class="secondary" onclick="loadBranches()">↻ Refresh</button></div><p class="hint">Main Admin અહીં branch બનાવશે અને દરેક branch માટે અલગ username/password તથા view/action permissions આપશે.</p><div class="table-wrap"><table><thead><tr><th>Branch</th><th>Code</th><th>Login</th><th>Permissions</th><th>Status</th><th>Action</th></tr></thead><tbody id="branchAccessBody"></tbody></table></div></div></section>
+    <section id="branches" class="page main-only"><div class="panel"><div class="toolbar"><button class="primary" onclick="addBranchAccess()">+ Add Branch & Login</button><button class="secondary" onclick="loadBranches()">↻ Refresh</button></div><p class="hint">Main Admin અહીં દરેક branch માટે અલગ username/password બનાવશે અને Students/Collection માટે અલગ View + Action access આપશે.</p><div class="table-wrap"><table><thead><tr><th>Branch</th><th>Code</th><th>Branch Login ID</th><th>Branch Password</th><th>Permissions</th><th>Status</th><th>Action</th></tr></thead><tbody id="branchAccessBody"></tbody></table></div></div></section>
 
     <section id="excel" class="page">
       <div class="panel">
@@ -1516,7 +1518,7 @@
     }
     window.logoutUser = logoutUser;
 
-    function applyAccessUI(){const branchOnly=!!BRANCH_TOKEN;document.querySelectorAll('.main-only').forEach(el=>el.style.display=branchOnly?'none':'');const bf=document.getElementById('branchFilter');if(branchOnly){bf.innerHTML='<option value="'+esc(ACCESS.branchId||'')+'">'+esc(ACCESS.branch||'My Branch')+'</option>';bf.disabled=true;}else{bf.disabled=false;}const title=document.querySelector('header h1');if(title)title.textContent=branchOnly?'Student Fee Management • '+(ACCESS.branch||'Branch'):'Student Fee Management';if(branchOnly){document.querySelectorAll('[data-permission]').forEach(el=>{const key=el.dataset.permission;if(ACCESS.permissions&&ACCESS.permissions[key]===false)el.style.display='none';});}else{document.querySelectorAll('[data-permission]').forEach(el=>el.style.display='');}}
+    function applyAccessUI(){const branchOnly=!!BRANCH_TOKEN;document.querySelectorAll('.main-only').forEach(el=>el.style.display=branchOnly?'none':'');document.querySelectorAll('.tab').forEach(el=>{if(!branchOnly)return;const page=el.dataset.page;const hide=(page==='students'&&ACCESS.permissions?.viewStudents===false)||(page==='history'&&ACCESS.permissions?.viewCollections===false);el.style.display=hide?'none':'';});document.getElementById('students').style.display=(branchOnly&&ACCESS.permissions?.viewStudents===false)?'none':'';document.getElementById('history').style.display=(branchOnly&&ACCESS.permissions?.viewCollections===false)?'none':'';const bf=document.getElementById('branchFilter');if(branchOnly){bf.innerHTML='<option value="'+esc(ACCESS.branchId||'')+'">'+esc(ACCESS.branch||'My Branch')+'</option>';bf.disabled=true;}else{bf.disabled=false;}const title=document.querySelector('header h1');if(title)title.textContent=branchOnly?'Student Fee Management • '+(ACCESS.branch||'Branch'):'Student Fee Management';if(branchOnly){document.querySelectorAll('[data-permission]').forEach(el=>{const key=el.dataset.permission;if(ACCESS.permissions&&ACCESS.permissions[key]===false)el.style.display='none';});}else{document.querySelectorAll('[data-permission]').forEach(el=>el.style.display='');}}
     async function loadBranches(){
       if(BRANCH_TOKEN){
         window._branches = ACCESS.branchId ? [{_id:ACCESS.branchId,name:ACCESS.branch,code:ACCESS.code,active:true}] : [];
@@ -1533,12 +1535,51 @@
         window._branches=[...map.values()]; syncBranchFilters(); renderAll(); console.warn('Branch load failed:',e);
       }
     }
-    function renderBranches(){const body=document.getElementById('branchAccessBody');if(!body)return;const users=window._branchUsers||[];body.innerHTML=(window._branches||[]).map(b=>{const u=users.find(x=>String(x.branchId?._id||x.branchId)===String(b._id));const pc=u?Object.values(u.permissions||{}).filter(Boolean).length:0;return `<tr><td><b>${esc(b.name)}</b></td><td>${esc(b.code)}</td><td>${u?`<b>${esc(u.username)}</b><br><span class="muted">Password: ${u.passwordAvailable?esc(u.password):'Reset required'}</span>`:'<span class="muted">No login</span>'}</td><td>${pc}/9</td><td>${b.active?'🟢 Active':'🔴 Inactive'}</td><td><button class="secondary" onclick="editBranchAccess('${b._id}')">Edit</button> <button class="danger" onclick="deleteBranchAccess('${b._id}')">Delete</button></td></tr>`;}).join('')||'<tr><td colspan="6" class="empty">No branches</td></tr>';}
+    function renderBranches(){
+      const body=document.getElementById('branchAccessBody'); if(!body)return;
+      const users=window._branchUsers||[];
+      body.innerHTML=(window._branches||[]).map(b=>{
+        const u=users.find(x=>String(x.branchId?._id||x.branchId)===String(b._id));
+        const pc=u?Object.values(u.permissions||{}).filter(Boolean).length:0;
+        const login=u?.username||'No login';
+        const pw=u?.passwordAvailable?u.password:'Reset required';
+        const safeId=esc(String(b._id));
+        return `<tr>
+          <td><b>${esc(b.name)}</b></td><td>${esc(b.code)}</td>
+          <td><div class="credential-cell"><b>${esc(login)}</b>${u?` <button type="button" class="mini-btn" onclick="copyBranchCredential('${safeId}','username')">Copy</button>`:''}</div></td>
+          <td><div class="credential-cell"><code id="branchPw-${safeId}">${esc(pw)}</code>${u?.passwordAvailable?` <button type="button" class="mini-btn" onclick="copyBranchCredential('${safeId}','password')">Copy</button>`:''}</div></td>
+          <td>${pc}/11<br><span class="muted">${u?.permissions?.viewStudents!==false?'Students ✓':'Students ✕'} • ${u?.permissions?.viewCollections!==false?'Collections ✓':'Collections ✕'}</span></td>
+          <td>${b.active?'🟢 Active':'🔴 Inactive'}</td>
+          <td><button class="secondary" onclick="editBranchAccess('${safeId}')">Edit</button> <button class="danger" onclick="deleteBranchAccess('${safeId}')">Delete</button></td>
+        </tr>`;
+      }).join('')||'<tr><td colspan="7" class="empty">No branches</td></tr>';
+    }
+    function copyBranchCredential(branchId,type){
+      const u=(window._branchUsers||[]).find(x=>String(x.branchId?._id||x.branchId)===String(branchId));
+      if(!u)return;
+      const value=type==='username'?u.username:u.password;
+      if(!value)return toast('Password is not available. Edit the branch to set one.');
+      navigator.clipboard?.writeText(String(value)).then(()=>toast((type==='username'?'Username':'Password')+' copied')).catch(()=>toast(String(value)));
+    }
     async function branchApi(method,body){return fetch('/api/branches',{method,headers:{'Content-Type':'application/json','X-Main-Admin':'true','X-Admin-Password':ADMIN_PASSWORDS.pageOpen,'X-Admin-Action':'pageOpen'},body:body?JSON.stringify(body):undefined});}
-    function permissionChecks(values={}){return Object.entries(PASSWORD_KEYS).map(([k,label])=>`<label style="display:flex;gap:8px;align-items:center;padding:8px;border:1px solid var(--line);border-radius:8px"><input type="checkbox" data-perm="${k}" ${values[k]!==false?'checked':''} style="width:auto">${esc(label)}</label>`).join('');}
+    function permissionChecks(values={}){const access=[['viewStudents','View Students'],['viewCollections','View Collections']];const actions=Object.entries(PASSWORD_KEYS).map(([k,label])=>[k,label]);const box=([k,label])=>`<label style="display:flex;gap:8px;align-items:center;padding:8px;border:1px solid var(--line);border-radius:8px"><input type="checkbox" data-perm="${k}" ${values[k]!==false?'checked':''} style="width:auto">${esc(label)}</label>`;return `<div class="hint" style="margin:4px 0 8px"><b>View Access</b></div>${access.map(box).join('')}<div class="hint" style="margin:14px 0 8px"><b>Action Access</b></div>${actions.map(box).join('')}`;}
     function openBranchForm(id=null){const b=id?(window._branches||[]).find(x=>x._id===id):null,u=id?(window._branchUsers||[]).find(x=>String(x.branchId?._id||x.branchId)===id):null;window._editingBranchId=id;document.getElementById('branchFormTitle').textContent=id?'✏️ Edit Branch':'🏢 Add Branch';document.getElementById('bfName').value=b?.name||'';document.getElementById('bfCode').value=b?.code||'';document.getElementById('bfUsername').value=u?.username||'';document.getElementById('bfPassword').value=u?.password||'';document.getElementById('bfActive').checked=b?.active!==false;document.getElementById('bfPermissions').innerHTML=permissionChecks(u?.permissions||{});document.getElementById('branchFormError').style.display='none';document.getElementById('branchFormModal').style.display='block';}
     function closeBranchForm(){document.getElementById('branchFormModal').style.display='none';window._editingBranchId=null;}
-    async function saveBranchForm(){const err=document.getElementById('branchFormError'),name=document.getElementById('bfName').value.trim(),code=document.getElementById('bfCode').value.trim().toUpperCase(),username=document.getElementById('bfUsername').value.trim(),password=document.getElementById('bfPassword').value; if(!name||!code||!username||password.length<4){err.textContent='Branch name, code, username and password (minimum 4 characters) are required.';err.style.display='block';return;}const permissions={};document.querySelectorAll('#bfPermissions [data-perm]').forEach(x=>permissions[x.dataset.perm]=x.checked);try{let r,d;if(window._editingBranchId){r=await branchApi('PUT',{type:'branch',id:window._editingBranchId,name,code,active:document.getElementById('bfActive').checked});d=await r.json();if(!r.ok)throw Error(d.error);const u=(window._branchUsers||[]).find(x=>String(x.branchId?._id||x.branchId)===String(window._editingBranchId));if(u){r=await branchApi('PUT',{type:'user',id:u.id||u._id,username,password,branchId:window._editingBranchId,permissions});d=await r.json();if(!r.ok)throw Error(d.error);}}else{r=await branchApi('POST',{name,code,username,password,active:true,permissions});d=await r.json();if(!r.ok)throw Error(d.error);}closeBranchForm();await loadBranches();toast(window._editingBranchId?'Branch updated':'Branch created');}catch(e){err.textContent=e.message||'Save failed';err.style.display='block';}}
+    async function saveBranchForm(){
+      const err=document.getElementById('branchFormError'), name=document.getElementById('bfName').value.trim(), code=document.getElementById('bfCode').value.trim().toUpperCase(), username=document.getElementById('bfUsername').value.trim(), password=document.getElementById('bfPassword').value;
+      const editing=!!window._editingBranchId;
+      if(!name||!code||!username||(password.length<4&&!editing)){err.textContent=editing?'Branch name, code and username are required. Enter a new password only if you want to change it.':'Branch name, code, username and password (minimum 4 characters) are required.';err.style.display='block';return;}
+      const permissions={};document.querySelectorAll('#bfPermissions [data-perm]').forEach(x=>permissions[x.dataset.perm]=x.checked);
+      try{
+        let r,d;
+        if(editing){
+          r=await branchApi('PUT',{type:'branch',id:window._editingBranchId,name,code,active:document.getElementById('bfActive').checked}); d=await r.json(); if(!r.ok)throw Error(d.error);
+          const u=(window._branchUsers||[]).find(x=>String(x.branchId?._id||x.branchId)===String(window._editingBranchId));
+          if(u){const payload={type:'user',id:u.id||u._id,username,branchId:window._editingBranchId,permissions};if(password)payload.password=password;r=await branchApi('PUT',payload);d=await r.json();if(!r.ok)throw Error(d.error);}
+        }else{r=await branchApi('POST',{name,code,username,password,active:true,permissions});d=await r.json();if(!r.ok)throw Error(d.error);}
+        closeBranchForm(); await loadBranches(); toast(editing?'Branch updated':'Branch created');
+      }catch(e){err.textContent=e.message||'Save failed';err.style.display='block';}
+    }
     async function addBranchAccess(){openBranchForm();}
     async function editBranchAccess(id){openBranchForm(id);}
     async function deleteBranchAccess(id){const b=(window._branches||[]).find(x=>x._id===id);if(!b)return;if(!(await askConfirm('Delete Branch',`Delete ${b.name}? It can only be deleted after its students and collections are moved.`)) )return;try{const r=await branchApi('DELETE',{type:'branch',id}),d=await r.json();if(!r.ok)throw Error(d.error);await loadBranches();toast('Branch deleted');}catch(e){toast(e.message||'Delete failed');}}

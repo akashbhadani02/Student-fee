@@ -1,7 +1,9 @@
 const mongoose = require('mongoose');
 const crypto = require('crypto');
 const PASSWORD_KEYS = ["pageOpen","studentAdd","studentEdit","studentDelete","collectionAdd","collectionEdit","collectionDelete","excelExport","excelImport"];
-const DEFAULT_PERMISSIONS = Object.fromEntries(PASSWORD_KEYS.map(k=>[k,true]));
+const ACCESS_KEYS = ["viewStudents","viewCollections"];
+const ALL_PERMISSION_KEYS = [...ACCESS_KEYS, ...PASSWORD_KEYS];
+const DEFAULT_PERMISSIONS = Object.fromEntries(ALL_PERMISSION_KEYS.map(k=>[k,true]));
 const branchSchema = new mongoose.Schema({name:{type:String,required:true,unique:true,trim:true},code:{type:String,required:true,unique:true,trim:true,uppercase:true},active:{type:Boolean,default:true}},{timestamps:true});
 const userSchema = new mongoose.Schema({username:{type:String,required:true,unique:true,trim:true},passwordHash:{type:String,required:true},passwordEncrypted:{type:String,default:''},branchId:{type:mongoose.Schema.Types.ObjectId,ref:'Branch',required:true},role:{type:String,default:'branch_admin'},permissions:{type:Map,of:Boolean,default:{}}},{timestamps:true});
 const Branch=mongoose.models.Branch||mongoose.model('Branch',branchSchema);
@@ -27,7 +29,7 @@ async function db(){
     if(!b)continue;
     let u=await BranchUser.findOne({branchId:b._id});
     if(!u){const pw=code+'@2026';try{await BranchUser.create({username:code.toLowerCase()+'_admin',passwordHash:hashPw(pw),passwordEncrypted:encPw(pw),branchId:b._id,permissions:DEFAULT_PERMISSIONS});}catch(e){}}
-    else{let changed=false;if(!u.passwordEncrypted){const pw=code+'@2026';u.passwordHash=hashPw(pw);u.passwordEncrypted=encPw(pw);changed=true;}if(!u.permissions||u.permissions.size===0){u.permissions=DEFAULT_PERMISSIONS;changed=true;}if(changed)await u.save();}
+    else{let changed=false;if(!u.passwordEncrypted){const pw=code+'@2026';u.passwordHash=hashPw(pw);u.passwordEncrypted=encPw(pw);changed=true;}if(!u.permissions||u.permissions.size===0){u.permissions=DEFAULT_PERMISSIONS;changed=true;} else { for(const k of ALL_PERMISSION_KEYS) if(!u.permissions.has(k)){u.permissions.set(k,true);changed=true;} }if(changed)await u.save();}
   }
   return global.__feesDb;
 }
