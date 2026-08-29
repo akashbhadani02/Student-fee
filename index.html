@@ -857,7 +857,7 @@
 
     <section id="history" class="page">
       <div class="panel">
-        <div class="toolbar"><button class="primary" onclick="addHistory()" data-permission="collectionAdd">+ Add Collection</button><button
+        <div class="toolbar"><button class="primary" onclick="addHistory()" data-permission="collectionAdd">+ Add Collection</button><select id="historyBranchFilter" style="min-width:180px"><option value="">All Branches</option></select><button
             class="secondary" onclick="exportXlsx()" data-permission="excelExport">Export .xlsx</button><button class="secondary"
             onclick="openPasswordSettings()">🔐 Password Change</button></div>
         <div class="table-wrap history-table-wrap" id="historyTableWrap">
@@ -940,7 +940,7 @@
 
     async function loadState() {
       try {
-        const headers = { "Cache-Control": "no-cache, no-store" }; if (BRANCH_TOKEN) headers.Authorization = 'Bearer ' + BRANCH_TOKEN; else headers['X-Main-Admin']='true';
+        const headers = { "Cache-Control": "no-cache, no-store" }; if (BRANCH_TOKEN) headers.Authorization = 'Bearer ' + BRANCH_TOKEN; else { headers['X-Main-Admin']='true'; headers['X-Admin-Password']=ADMIN_PASSWORDS.pageOpen||''; headers['X-Admin-Action']='pageOpen'; }
         const res = await fetch("/api/state?ts=" + Date.now(), { cache: "no-store", headers });
         if (!res.ok) throw new Error("API unavailable");
         const data = await res.json();
@@ -989,7 +989,7 @@
         const res = await fetch("/api/state?live=" + Date.now(), {
           method: "GET",
           cache: "no-store",
-          headers: Object.assign({ "Cache-Control": "no-cache, no-store", "Pragma": "no-cache" }, BRANCH_TOKEN ? {Authorization:'Bearer '+BRANCH_TOKEN} : {'X-Main-Admin':'true'})
+          headers: Object.assign({ "Cache-Control": "no-cache, no-store", "Pragma": "no-cache" }, BRANCH_TOKEN ? {Authorization:'Bearer '+BRANCH_TOKEN} : {'X-Main-Admin':'true','X-Admin-Password':ADMIN_PASSWORDS.pageOpen||'','X-Admin-Action':'pageOpen'})
         });
         if (!res.ok) throw new Error("HTTP " + res.status);
         const data = await res.json();
@@ -1026,8 +1026,15 @@
     function status(s) { const c = calc(s); if (c.total <= 0 && c.paid <= 0) return ["No Fee", "partial"]; if (c.remaining <= 0) return ["Paid", "paid"]; if (c.paid > 0) return ["Partial", "partial"]; return ["Due", "due"]; }
     function branchName(b) { const x=(window._branches||[]).find(x=>String(x._id)===String(b)); return x?.name || String(b||'').trim() || 'Unassigned'; }
     function branchClass(b) { const n=branchName(b); return 'branch-' + n.toLowerCase().replace(/[^a-z0-9]+/g,'-'); }
-    function branchIdForName(name){ return (window._branches||[]).find(b=>b.name===name)?._id || null; }
+    function branchIdForName(name){ return (window._branches||[]).find(b=>String(b.name).trim().toLowerCase()===String(name).trim().toLowerCase())?._id || null; }
     function branchList(){ return (window._branches||[]).filter(b=>b.active!==false); }
+    function syncBranchFilters(){
+      const bf=document.getElementById('branchFilter');
+      const hf=document.getElementById('historyBranchFilter');
+      const bs=branchList();
+      if(bf){ const cur=bf.value; bf.innerHTML='<option value="">All Branches</option>'+bs.map(b=>`<option value="${esc(b._id)}">${esc(b.name)}</option>`).join(''); if(bs.some(b=>String(b._id)===String(cur))) bf.value=cur; }
+      if(hf){ const cur=hf.value; hf.innerHTML='<option value="">All Branches</option>'+bs.map(b=>`<option value="${esc(b._id)}">${esc(b.name)}</option>`).join(''); if(bs.some(b=>String(b._id)===String(cur))) hf.value=cur; }
+    }
     function allBranches(){ return window._branches||[]; }
     function renderAll() { renderDashboard(); renderStudents(); renderHistory(); renderExcelInfo(); }
     function renderDashboard() {
@@ -1045,7 +1052,13 @@
         return `<tr><td>${s.id}</td><td>${esc(s.name)}</td><td>${esc(s.mobile || "")}</td><td><span class="branch-badge ${branchClass(s.branch)}">${branchName(s.branch)}</span></td><td class="num">${money(c.total)}</td><td class="num">${money(c.paid)}</td><td class="num">${money(c.p25)}</td><td class="num">${money(c.remaining)}</td><td><span class="badge ${st[1]}">${st[0]}</span></td><td><button class="secondary" onclick="editStudent('${s.id}')">Edit</button> <button class="danger" onclick="deleteStudent('${s.id}')">Delete</button></td></tr>`;
       }).join("") : `<tr><td colspan="10" class="empty">No students match the filter.</td></tr>`;
     }
-    function renderHistory(){const wrap=document.getElementById("historyTableWrap");wrap.querySelector("thead").innerHTML="<tr><th>Date</th><th>Branch</th><th>Collection</th><th>Action</th></tr>";document.getElementById("historyBody").innerHTML=state.history.length?state.history.map((x,i)=>`<tr><td>${esc(x.date)}</td><td>${esc(x.branch||branchName(x.branchId)||"")}</td><td>${money(x.amount||0)}</td><td><button class="secondary" onclick="editHistory(${i})">Edit</button> <button class="danger" onclick="deleteHistory(${i})">Delete</button></td></tr>`).join(""):'<tr><td colspan="4" class="empty">No collection history.</td></tr>';}
+    function renderHistory(){
+      const wrap=document.getElementById("historyTableWrap");
+      const bf=document.getElementById("historyBranchFilter")?.value||"";
+      const rows=state.history.map((x,i)=>({x,i})).filter(({x})=>!bf||String(x.branchId||"")===bf||branchName(x.branchId)===bf||String(x.branch||"")===bf);
+      wrap.querySelector("thead").innerHTML="<tr><th>Date</th><th>Branch</th><th>Collection</th><th>Action</th></tr>";
+      document.getElementById("historyBody").innerHTML=rows.length?rows.map(({x,i})=>`<tr><td>${esc(x.date)}</td><td><span class="branch-badge ${branchClass(x.branchId||x.branch)}">${esc(x.branch||branchName(x.branchId)||"Unassigned")}</span></td><td>${money(x.amount||0)}</td><td><button class="secondary" onclick="editHistory(${i})">Edit</button> <button class="danger" onclick="deleteHistory(${i})">Delete</button></td></tr>`).join(""): '<tr><td colspan="4" class="empty">No collection history.</td></tr>';
+    }
     function renderExcelInfo() { document.getElementById("excelInfo").innerHTML = `<b>${state.students.length}</b> students &nbsp; • &nbsp; <b>${state.history.length}</b> collection entries &nbsp; • &nbsp; Database: <b>${dbReady ? "Connected" : "Not connected"}</b>`; }
     function esc(s) { return String(s ?? "").replace(/[&<>"']/g, m => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", "\"": "&quot;", "'": "&#039;" }[m])); }
 
@@ -1165,10 +1178,13 @@
       else{
         const bs=branchList();
         if(!bs.length){toast('No active branches. Create a branch first.');return;}
-        const names=bs.map(b=>`${b._id} | ${b.name}`).join("\n");
-        const picked=prompt("Branch select કરો (ID paste કરો):\n"+names,bid);
+        const names=bs.map((b,n)=>`${n+1}. ${b.name}`).join("\n");
+        const currentIndex=Math.max(0,bs.findIndex(b=>String(b._id)===String(bid)));
+        const picked=prompt("Branch number select કરો:\n"+names,String(currentIndex+1));
         if(picked===null)return;
-        bid=picked.includes("|")?picked.split("|")[0].trim():picked.trim();
+        const idx=parseInt(picked,10)-1;
+        if(!Number.isInteger(idx)||!bs[idx]){toast("Invalid branch selected.");return;}
+        bid=String(bs[idx]._id);
       }
       const b=BRANCH_TOKEN
         ? { _id:ACCESS.branchId, name:ACCESS.branch }
@@ -1483,6 +1499,7 @@
     });
     document.getElementById("search").addEventListener("input", renderStudents);
     document.getElementById("branchFilter").addEventListener("change", renderStudents);
+    document.getElementById("historyBranchFilter")?.addEventListener("change", renderHistory);
     document.querySelectorAll(".tab").forEach(b => b.addEventListener("click", () => { document.querySelectorAll(".tab").forEach(x => x.classList.remove("active")); document.querySelectorAll(".page").forEach(x => x.classList.remove("active")); b.classList.add("active"); document.getElementById(b.dataset.page).classList.add("active"); }));
     function toast(t) { const x = document.getElementById("toast"); x.textContent = t; x.style.display = "block"; clearTimeout(window._toast); window._toast = setTimeout(() => x.style.display = "none", 2200); }
 
@@ -1500,7 +1517,22 @@
     window.logoutUser = logoutUser;
 
     function applyAccessUI(){const branchOnly=!!BRANCH_TOKEN;document.querySelectorAll('.main-only').forEach(el=>el.style.display=branchOnly?'none':'');const bf=document.getElementById('branchFilter');if(branchOnly){bf.innerHTML='<option value="'+esc(ACCESS.branchId||'')+'">'+esc(ACCESS.branch||'My Branch')+'</option>';bf.disabled=true;}else{bf.disabled=false;}const title=document.querySelector('header h1');if(title)title.textContent=branchOnly?'Student Fee Management • '+(ACCESS.branch||'Branch'):'Student Fee Management';if(branchOnly){document.querySelectorAll('[data-permission]').forEach(el=>{const key=el.dataset.permission;if(ACCESS.permissions&&ACCESS.permissions[key]===false)el.style.display='none';});}else{document.querySelectorAll('[data-permission]').forEach(el=>el.style.display='');}}
-    async function loadBranches(){if(BRANCH_TOKEN)return;try{const res=await fetch('/api/branches',{headers:{'X-Main-Admin':'true','X-Admin-Password':ADMIN_PASSWORDS.pageOpen,'X-Admin-Action':'pageOpen'}});const d=await res.json();if(!res.ok)throw Error(d.error||'Branch access failed');window._branches=d.branches||[];window._branchUsers=d.users||[];renderBranches();const bf=document.getElementById('branchFilter');if(bf)bf.innerHTML='<option value="">All Branches</option>'+window._branches.map(b=>`<option value="${esc(b._id)}">${esc(b.name)}</option>`).join('');renderAll();}catch(e){toast(e.message||'Branch load failed');}}
+    async function loadBranches(){
+      if(BRANCH_TOKEN){
+        window._branches = ACCESS.branchId ? [{_id:ACCESS.branchId,name:ACCESS.branch,code:ACCESS.code,active:true}] : [];
+        syncBranchFilters(); renderAll(); return;
+      }
+      try{
+        const res=await fetch('/api/branches',{headers:{'X-Main-Admin':'true','X-Admin-Password':ADMIN_PASSWORDS.pageOpen,'X-Admin-Action':'pageOpen'},cache:'no-store'});
+        const d=await res.json(); if(!res.ok) throw Error(d.error||'Branch access failed');
+        window._branches=d.branches||[]; window._branchUsers=d.users||[]; renderBranches(); syncBranchFilters(); renderAll();
+      }catch(e){
+        // Keep the UI usable even if branch-management permission is unavailable.
+        const map=new Map(); (state.students||[]).forEach(s=>{if(s.branchId&&s.branch){map.set(String(s.branchId),{_id:s.branchId,name:s.branch,active:true});}});
+        (state.history||[]).forEach(h=>{if(h.branchId&&h.branch&&!map.has(String(h.branchId)))map.set(String(h.branchId),{_id:h.branchId,name:h.branch,active:true});});
+        window._branches=[...map.values()]; syncBranchFilters(); renderAll(); console.warn('Branch load failed:',e);
+      }
+    }
     function renderBranches(){const body=document.getElementById('branchAccessBody');if(!body)return;const users=window._branchUsers||[];body.innerHTML=(window._branches||[]).map(b=>{const u=users.find(x=>String(x.branchId?._id||x.branchId)===String(b._id));const pc=u?Object.values(u.permissions||{}).filter(Boolean).length:0;return `<tr><td><b>${esc(b.name)}</b></td><td>${esc(b.code)}</td><td>${u?`<b>${esc(u.username)}</b><br><span class="muted">Password: ${u.passwordAvailable?esc(u.password):'Reset required'}</span>`:'<span class="muted">No login</span>'}</td><td>${pc}/9</td><td>${b.active?'🟢 Active':'🔴 Inactive'}</td><td><button class="secondary" onclick="editBranchAccess('${b._id}')">Edit</button> <button class="danger" onclick="deleteBranchAccess('${b._id}')">Delete</button></td></tr>`;}).join('')||'<tr><td colspan="6" class="empty">No branches</td></tr>';}
     async function branchApi(method,body){return fetch('/api/branches',{method,headers:{'Content-Type':'application/json','X-Main-Admin':'true','X-Admin-Password':ADMIN_PASSWORDS.pageOpen,'X-Admin-Action':'pageOpen'},body:body?JSON.stringify(body):undefined});}
     function permissionChecks(values={}){return Object.entries(PASSWORD_KEYS).map(([k,label])=>`<label style="display:flex;gap:8px;align-items:center;padding:8px;border:1px solid var(--line);border-radius:8px"><input type="checkbox" data-perm="${k}" ${values[k]!==false?'checked':''} style="width:auto">${esc(label)}</label>`).join('');}
