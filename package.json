@@ -1,6 +1,6 @@
 {
   "name": "student-fee-management-mongodb",
-  "version": "2.1.0-branch-access",
+  "version": "1.0.0",
   "private": true,
   "scripts": {
     "start": "node server.js",

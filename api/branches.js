@@ -1,9 +1,7 @@
 const mongoose = require('mongoose');
 const crypto = require('crypto');
 const PASSWORD_KEYS = ["pageOpen","studentAdd","studentEdit","studentDelete","collectionAdd","collectionEdit","collectionDelete","excelExport","excelImport"];
-const ACCESS_KEYS = ["viewStudents","viewCollections"];
-const ALL_PERMISSION_KEYS = [...ACCESS_KEYS, ...PASSWORD_KEYS];
-const DEFAULT_PERMISSIONS = Object.fromEntries(ALL_PERMISSION_KEYS.map(k=>[k,true]));
+const DEFAULT_PERMISSIONS = Object.fromEntries(PASSWORD_KEYS.map(k=>[k,true]));
 const branchSchema = new mongoose.Schema({name:{type:String,required:true,unique:true,trim:true},code:{type:String,required:true,unique:true,trim:true,uppercase:true},active:{type:Boolean,default:true}},{timestamps:true});
 const userSchema = new mongoose.Schema({username:{type:String,required:true,unique:true,trim:true},passwordHash:{type:String,required:true},passwordEncrypted:{type:String,default:''},branchId:{type:mongoose.Schema.Types.ObjectId,ref:'Branch',required:true},role:{type:String,default:'branch_admin'},permissions:{type:Map,of:Boolean,default:{}}},{timestamps:true});
 const Branch=mongoose.models.Branch||mongoose.model('Branch',branchSchema);
@@ -27,13 +25,36 @@ async function db(){
     let b=await Branch.findOne({name});
     if(!b){try{b=await Branch.create({name,code,active:true});}catch(e){b=await Branch.findOne({name});}}
     if(!b)continue;
+    if(b.active!==true){b.active=true; await b.save();}
     let u=await BranchUser.findOne({branchId:b._id});
     if(!u){const pw=code+'@2026';try{await BranchUser.create({username:code.toLowerCase()+'_admin',passwordHash:hashPw(pw),passwordEncrypted:encPw(pw),branchId:b._id,permissions:DEFAULT_PERMISSIONS});}catch(e){}}
-    else{let changed=false;if(!u.passwordEncrypted){const pw=code+'@2026';u.passwordHash=hashPw(pw);u.passwordEncrypted=encPw(pw);changed=true;}if(!u.permissions||u.permissions.size===0){u.permissions=DEFAULT_PERMISSIONS;changed=true;} else { for(const k of ALL_PERMISSION_KEYS) if(!u.permissions.has(k)){u.permissions.set(k,true);changed=true;} }if(changed)await u.save();}
+    else{let changed=false;if(!u.passwordEncrypted){const pw=code+'@2026';u.passwordHash=hashPw(pw);u.passwordEncrypted=encPw(pw);changed=true;}if(!u.permissions||u.permissions.size===0){u.permissions=DEFAULT_PERMISSIONS;changed=true;}if(changed)await u.save();}
   }
   return global.__feesDb;
 }
-async function adminOk(req){const p=String(req.headers['x-admin-password']||'');if(!p)return false;let a=await AdminSettings.findOne({key:'main'});if(!a){const h=sha(process.env.ADMIN_PASSWORD||'1316618');const hashes={};PASSWORD_KEYS.forEach(k=>hashes[k]=h);try{a=await AdminSettings.create({key:'main',passwordHash:h,passwordHashes:hashes});}catch(e){a=await AdminSettings.findOne({key:'main'});}}if(!a)return false;const key=String(req.headers['x-admin-action']||'pageOpen');return !!a.passwordHashes?.get(key) && a.passwordHashes.get(key)===sha(p);}
+async function adminOk(req){
+  const supplied=String(req.headers['x-admin-password']||'');
+  if(!supplied)return false;
+  const key=String(req.headers['x-admin-action']||'pageOpen');
+  // The configured ADMIN_PASSWORD is always a valid main-admin credential.
+  // This also makes deployments resilient when an older AdminSettings document
+  // exists in MongoDB with a different/legacy password hash.
+  if((process.env.ADMIN_PASSWORD && supplied===String(process.env.ADMIN_PASSWORD)) || (!process.env.ADMIN_PASSWORD && supplied==='1316618'))return true;
+  let a=await AdminSettings.findOne({key:'main'});
+  if(!a){
+    const h=sha(process.env.ADMIN_PASSWORD||'1316618'); const hashes={};
+    PASSWORD_KEYS.forEach(k=>hashes[k]=h);
+    try{a=await AdminSettings.create({key:'main',passwordHash:h,passwordHashes:hashes});}
+    catch(e){a=await AdminSettings.findOne({key:'main'});}
+  }
+  if(!a)return false;
+  let stored='';
+  if(a.passwordHashes){
+    stored=typeof a.passwordHashes.get==='function' ? (a.passwordHashes.get(key)||'') : (a.passwordHashes[key]||'');
+  }
+  if(!stored && a.passwordHash)stored=a.passwordHash;
+  return !!stored && (stored===sha(supplied) || checkPw(supplied,stored));
+}
 function mainAdmin(req){return String(req.headers['x-main-admin']||'')==='true' && req.headers['x-admin-password'];}
 async function handler(req,res){res.setHeader('Access-Control-Allow-Origin','*');res.setHeader('Access-Control-Allow-Methods','GET,POST,PUT,DELETE,OPTIONS');res.setHeader('Access-Control-Allow-Headers','Content-Type,Authorization,X-Admin-Password,X-Admin-Action,X-Main-Admin');res.setHeader('Cache-Control','no-store');if(req.method==='OPTIONS')return res.status(204).end();try{await db();if(!(await adminOk(req))||!mainAdmin(req))return res.status(401).json({error:'Main admin access required.'});
  if(req.method==='GET'){const rows=await Branch.find().sort({name:1}).lean();const users=await BranchUser.find().populate('branchId','name code').sort({username:1}).lean();return res.json({branches:rows,users:users.map(u=>({id:u._id,username:u.username,branchId:u.branchId,password:u.passwordEncrypted?decPw(u.passwordEncrypted):'',passwordAvailable:!!u.passwordEncrypted,permissions:Object.fromEntries(u.permissions||[])}))});}
