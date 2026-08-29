@@ -1,0 +1,840 @@
+{
+  "students": [
+    {
+      "id": "S001",
+      "name": "Sangnani Dhruvi Brijeshbhai",
+      "branch": "Mota Varachha",
+      "totalFee": null,
+      "paidFee": null,
+      "mobile": ""
+    },
+    {
+      "id": "S002",
+      "name": "Savaliya Lax Jaysukhbhai",
+      "branch": "Mota Varachha",
+      "totalFee": null,
+      "paidFee": null,
+      "mobile": ""
+    },
+    {
+      "id": "S003",
+      "name": "Bagda Aryan Mukeshbhai",
+      "branch": "Mota Varachha",
+      "totalFee": null,
+      "paidFee": null,
+      "mobile": ""
+    },
+    {
+      "id": "S004",
+      "name": "Talaviya Gracy Mehulbhai",
+      "branch": "Mission Road",
+      "totalFee": null,
+      "paidFee": 4500.0,
+      "mobile": ""
+    },
+    {
+      "id": "S005",
+      "name": "Bukhani Jenee Ghnshayambhai",
+      "branch": "Mission Road",
+      "totalFee": null,
+      "paidFee": 4500.0,
+      "mobile": ""
+    },
+    {
+      "id": "S006",
+      "name": "Gelani Mantra Ankitbhai",
+      "branch": "Mission Road",
+      "totalFee": null,
+      "paidFee": 3500.0,
+      "mobile": ""
+    },
+    {
+      "id": "S007",
+      "name": "Patoliya Vrushti Hiteshbhai",
+      "branch": "Velanja",
+      "totalFee": null,
+      "paidFee": 6000.0,
+      "mobile": ""
+    },
+    {
+      "id": "S008",
+      "name": "Sojitra Nehanshi Maheshbhai",
+      "branch": "Velanja",
+      "totalFee": null,
+      "paidFee": 8500.0,
+      "mobile": ""
+    },
+    {
+      "id": "S009",
+      "name": "Shekhda Ami Hiteshbhai",
+      "branch": "Velanja",
+      "totalFee": null,
+      "paidFee": 6000.0,
+      "mobile": ""
+    },
+    {
+      "id": "S010",
+      "name": "Rafaliya Harmisha Kishanbhai",
+      "branch": "Velanja",
+      "totalFee": null,
+      "paidFee": 6000.0,
+      "mobile": ""
+    },
+    {
+      "id": "S011",
+      "name": "Umretiya Jilan Prakashbhai",
+      "branch": "Velanja",
+      "totalFee": null,
+      "paidFee": 6000.0,
+      "mobile": ""
+    },
+    {
+      "id": "S012",
+      "name": "Kathiriya Feni Nileshbhai",
+      "branch": "Velanja",
+      "totalFee": null,
+      "paidFee": 6000.0,
+      "mobile": ""
+    },
+    {
+      "id": "S013",
+      "name": "Desai Brinda Prakashbhai",
+      "branch": "Velanja",
+      "totalFee": null,
+      "paidFee": 6000.0,
+      "mobile": ""
+    },
+    {
+      "id": "S014",
+      "name": "Parmar Trupti Ramjibhai",
+      "branch": "Velanja",
+      "totalFee": null,
+      "paidFee": 6000.0,
+      "mobile": ""
+    },
+    {
+      "id": "S015",
+      "name": "Khokhar Dharmi Rajnibhai",
+      "branch": "Velanja",
+      "totalFee": null,
+      "paidFee": 5000.0,
+      "mobile": ""
+    },
+    {
+      "id": "S016",
+      "name": "Lakhani Jenee Satishbhai",
+      "branch": "Velanja",
+      "totalFee": null,
+      "paidFee": 8000.0,
+      "mobile": ""
+    },
+    {
+      "id": "S017",
+      "name": "Khokhar Mahek Vijaybhai",
+      "branch": "Velanja",
+      "totalFee": null,
+      "paidFee": 6000.0,
+      "mobile": ""
+    },
+    {
+      "id": "S018",
+      "name": "Rupapara Dharmi Rajnishbhai",
+      "branch": "Velanja",
+      "totalFee": null,
+      "paidFee": 6000.0,
+      "mobile": ""
+    },
+    {
+      "id": "S019",
+      "name": "Patel Riddhi Hiteshbhai",
+      "branch": "Velanja",
+      "totalFee": null,
+      "paidFee": 6000.0,
+      "mobile": ""
+    },
+    {
+      "id": "S020",
+      "name": "Nonghanvadra Devangi Rohitbhai",
+      "branch": "Velanja",
+      "totalFee": null,
+      "paidFee": 3000.0,
+      "mobile": ""
+    },
+    {
+      "id": "S021",
+      "name": "Koladiya Deep Rajnibhai",
+      "branch": "Velanja",
+      "totalFee": null,
+      "paidFee": 5000.0,
+      "mobile": ""
+    },
+    {
+      "id": "S022",
+      "name": "Patoliya Vansh Hiteshbhai",
+      "branch": "Velanja",
+      "totalFee": null,
+      "paidFee": 6000.0,
+      "mobile": ""
+    },
+    {
+      "id": "S023",
+      "name": "Savaliya Vraj Chetanbhai",
+      "branch": "Velanja",
+      "totalFee": null,
+      "paidFee": 6500.0,
+      "mobile": ""
+    },
+    {
+      "id": "S024",
+      "name": "Zalavadiya Ursh Dineshbhai",
+      "branch": "Velanja",
+      "totalFee": null,
+      "paidFee": 4000.0,
+      "mobile": ""
+    },
+    {
+      "id": "S025",
+      "name": "Madhani Jay Jamanbhai",
+      "branch": "Velanja",
+      "totalFee": null,
+      "paidFee": 6000.0,
+      "mobile": ""
+    },
+    {
+      "id": "S026",
+      "name": "Thummar Vraj Maheshbhai",
+      "branch": "Velanja",
+      "totalFee": null,
+      "paidFee": null,
+      "mobile": ""
+    },
+    {
+      "id": "S027",
+      "name": "Bhanderi Vasu Hiteshbhai",
+      "branch": "Velanja",
+      "totalFee": null,
+      "paidFee": 6000.0,
+      "mobile": ""
+    },
+    {
+      "id": "S028",
+      "name": "Joshi Dhaval Tineshbhai",
+      "branch": "Velanja",
+      "totalFee": null,
+      "paidFee": 6000.0,
+      "mobile": ""
+    },
+    {
+      "id": "S029",
+      "name": "Vekariya Hitanshu Ghanshayambhai",
+      "branch": "Velanja",
+      "totalFee": null,
+      "paidFee": null,
+      "mobile": ""
+    },
+    {
+      "id": "S030",
+      "name": "Ghadiya Vibhaben Manharbhai",
+      "branch": "Velanja",
+      "totalFee": null,
+      "paidFee": null,
+      "mobile": ""
+    },
+    {
+      "id": "S031",
+      "name": "Patel Pranali Sanjaybhai",
+      "branch": "Velanja",
+      "totalFee": null,
+      "paidFee": null,
+      "mobile": ""
+    },
+    {
+      "id": "S032",
+      "name": "Vataliya Punam Vanrajbhai",
+      "branch": "Velanja",
+      "totalFee": null,
+      "paidFee": 6000.0,
+      "mobile": ""
+    },
+    {
+      "id": "S033",
+      "name": "Gajera Prajesh Vinubhai",
+      "branch": "Velanja",
+      "totalFee": null,
+      "paidFee": 6000.0,
+      "mobile": ""
+    },
+    {
+      "id": "S034",
+      "name": "Kathiriya Vraj Gopalbhai",
+      "branch": "Velanja",
+      "totalFee": null,
+      "paidFee": 6000.0,
+      "mobile": ""
+    },
+    {
+      "id": "S035",
+      "name": "Malani Netra Rajeshbhai",
+      "branch": "Velanja",
+      "totalFee": null,
+      "paidFee": 6000.0,
+      "mobile": ""
+    },
+    {
+      "id": "S036",
+      "name": "Chakrani Vishubh Rasikbhai",
+      "branch": "Velanja",
+      "totalFee": null,
+      "paidFee": null,
+      "mobile": ""
+    },
+    {
+      "id": "S037",
+      "name": "Ramani Akhil Sanjaybhai",
+      "branch": "Velanja",
+      "totalFee": null,
+      "paidFee": 6000.0,
+      "mobile": ""
+    },
+    {
+      "id": "S038",
+      "name": "Gamit Sneha Shantubhai",
+      "branch": "Velanja",
+      "totalFee": null,
+      "paidFee": null,
+      "mobile": ""
+    },
+    {
+      "id": "S039",
+      "name": "Ramani Purvit Mileshbhai",
+      "branch": "Velanja",
+      "totalFee": null,
+      "paidFee": null,
+      "mobile": ""
+    },
+    {
+      "id": "S040",
+      "name": "Sabhadiya Prince Anilbhai",
+      "branch": "Velanja",
+      "totalFee": null,
+      "paidFee": 6000.0,
+      "mobile": ""
+    },
+    {
+      "id": "S041",
+      "name": "Senjaliya Jeel Alpeshbhai",
+      "branch": "Velanja",
+      "totalFee": null,
+      "paidFee": 6000.0,
+      "mobile": ""
+    },
+    {
+      "id": "S042",
+      "name": "Sojitra Utsav Sanjaybhai",
+      "branch": "Velanja",
+      "totalFee": null,
+      "paidFee": 6000.0,
+      "mobile": ""
+    },
+    {
+      "id": "S043",
+      "name": "goyani dharman manojbhai",
+      "branch": "Velanja",
+      "totalFee": null,
+      "paidFee": 6000.0,
+      "mobile": ""
+    },
+    {
+      "id": "S044",
+      "name": "pavan jaat",
+      "branch": "Velanja",
+      "totalFee": null,
+      "paidFee": 6000.0,
+      "mobile": ""
+    },
+    {
+      "id": "S045",
+      "name": "Dobariya Naksh Nareshbhai",
+      "branch": "Velanja",
+      "totalFee": null,
+      "paidFee": null,
+      "mobile": ""
+    },
+    {
+      "id": "S046",
+      "name": "Kevadiya nirva chetanbhai",
+      "branch": "Mota Varachha",
+      "totalFee": null,
+      "paidFee": null,
+      "mobile": ""
+    },
+    {
+      "id": "S047",
+      "name": "Vaghasiya Yash Rakeshbhai",
+      "branch": "Mota Varachha",
+      "totalFee": null,
+      "paidFee": null,
+      "mobile": ""
+    },
+    {
+      "id": "S048",
+      "name": "Navadiya Dishank Krunalbhai",
+      "branch": "Mota Varachha",
+      "totalFee": null,
+      "paidFee": null,
+      "mobile": ""
+    },
+    {
+      "id": "S049",
+      "name": "Pansheriya jay sanjaybhai",
+      "branch": "Mission Road",
+      "totalFee": null,
+      "paidFee": 5500.0,
+      "mobile": ""
+    },
+    {
+      "id": "S050",
+      "name": "Bhunagliya arvi rameshbhai",
+      "branch": "Mota Varachha",
+      "totalFee": null,
+      "paidFee": null,
+      "mobile": ""
+    },
+    {
+      "id": "S051",
+      "name": "Vadadoriya sakshi manojbhai",
+      "branch": "Mota Varachha",
+      "totalFee": null,
+      "paidFee": null,
+      "mobile": ""
+    },
+    {
+      "id": "S052",
+      "name": "Kamani jensi bhavesh bhai",
+      "branch": "Velanja",
+      "totalFee": null,
+      "paidFee": null,
+      "mobile": ""
+    },
+    {
+      "id": "S053",
+      "name": "Kukadiya riddhi sanjaybhai",
+      "branch": "Velanja",
+      "totalFee": null,
+      "paidFee": null,
+      "mobile": ""
+    },
+    {
+      "id": "S054",
+      "name": "Talaviya Tithi Jayeshbhai",
+      "branch": "Mota Varachha",
+      "totalFee": null,
+      "paidFee": null,
+      "mobile": ""
+    },
+    {
+      "id": "S055",
+      "name": "Lathiya netra girishbhai",
+      "branch": "Mota Varachha",
+      "totalFee": null,
+      "paidFee": null,
+      "mobile": ""
+    },
+    {
+      "id": "S056",
+      "name": "Baldha jal lalitkumar",
+      "branch": "Velanja",
+      "totalFee": null,
+      "paidFee": 6000.0,
+      "mobile": ""
+    },
+    {
+      "id": "S057",
+      "name": "Gediya om peadipbhai",
+      "branch": "Velanja",
+      "totalFee": null,
+      "paidFee": 5500.0,
+      "mobile": ""
+    },
+    {
+      "id": "S058",
+      "name": "Jiyani rudra bhaveshbhai",
+      "branch": "Velanja",
+      "totalFee": null,
+      "paidFee": 6000.0,
+      "mobile": ""
+    },
+    {
+      "id": "S059",
+      "name": "Vekariya ritva nileshbhai",
+      "branch": "Velanja",
+      "totalFee": null,
+      "paidFee": null,
+      "mobile": ""
+    },
+    {
+      "id": "S060",
+      "name": "Borda dharmi dharmeshbhai",
+      "branch": "Velanja",
+      "totalFee": null,
+      "paidFee": 6000.0,
+      "mobile": ""
+    },
+    {
+      "id": "S061",
+      "name": "Radadiya yash nileshbhai",
+      "branch": "Velanja",
+      "totalFee": null,
+      "paidFee": 6000.0,
+      "mobile": ""
+    },
+    {
+      "id": "S062",
+      "name": "Savaliya ved kantibhai",
+      "branch": "Mission Road",
+      "totalFee": null,
+      "paidFee": 4000.0,
+      "mobile": ""
+    },
+    {
+      "id": "S063",
+      "name": "Pansheriya krisha jitendrabhai",
+      "branch": "Velanja",
+      "totalFee": null,
+      "paidFee": null,
+      "mobile": ""
+    },
+    {
+      "id": "S064",
+      "name": "Vaghela hemanshi kirtibhai",
+      "branch": "Velanja",
+      "totalFee": null,
+      "paidFee": null,
+      "mobile": ""
+    },
+    {
+      "id": "S065",
+      "name": "Mavani harmin satishbhai",
+      "branch": "Velanja",
+      "totalFee": null,
+      "paidFee": 3000.0,
+      "mobile": ""
+    },
+    {
+      "id": "S066",
+      "name": "Gohil sagar rakeshbhai",
+      "branch": "Velanja",
+      "totalFee": null,
+      "paidFee": null,
+      "mobile": ""
+    },
+    {
+      "id": "S067",
+      "name": "Vekariya jenee kalpeshbhai",
+      "branch": "Velanja",
+      "totalFee": null,
+      "paidFee": null,
+      "mobile": ""
+    },
+    {
+      "id": "S068",
+      "name": "Thesiya sarthak shrikantbhai",
+      "branch": "Velanja",
+      "totalFee": null,
+      "paidFee": 5000.0,
+      "mobile": ""
+    },
+    {
+      "id": "S069",
+      "name": "Dhaduk taksh alpeshbhai",
+      "branch": "Velanja",
+      "totalFee": null,
+      "paidFee": 5000.0,
+      "mobile": ""
+    },
+    {
+      "id": "S070",
+      "name": "Ghediya mahi nitinbhai",
+      "branch": "Velanja",
+      "totalFee": null,
+      "paidFee": null,
+      "mobile": ""
+    },
+    {
+      "id": "S071",
+      "name": "Kanani daksh bhaveshbhai",
+      "branch": "Velanja",
+      "totalFee": null,
+      "paidFee": 6000.0,
+      "mobile": ""
+    },
+    {
+      "id": "S072",
+      "name": "Lathiya Bhavya Hareshbhai",
+      "branch": "Velanja",
+      "totalFee": null,
+      "paidFee": 6000.0,
+      "mobile": ""
+    },
+    {
+      "id": "S073",
+      "name": "Galani rushabh sunilbhai",
+      "branch": "Velanja",
+      "totalFee": null,
+      "paidFee": null,
+      "mobile": ""
+    },
+    {
+      "id": "S074",
+      "name": "Gohil nehal bharat bhai",
+      "branch": "Velanja",
+      "totalFee": null,
+      "paidFee": 6000.0,
+      "mobile": ""
+    },
+    {
+      "id": "S075",
+      "name": "Savaliya Niks vasantbhai",
+      "branch": "Velanja",
+      "totalFee": null,
+      "paidFee": 6000.0,
+      "mobile": ""
+    },
+    {
+      "id": "S076",
+      "name": "Bhuva Tirth Sureshbhai",
+      "branch": "Velanja",
+      "totalFee": null,
+      "paidFee": null,
+      "mobile": ""
+    },
+    {
+      "id": "S077",
+      "name": "Vadadoriya bansi jigneshbhai",
+      "branch": "Velanja",
+      "totalFee": null,
+      "paidFee": null,
+      "mobile": ""
+    },
+    {
+      "id": "S078",
+      "name": "Mavani jeni bhaveshbhai",
+      "branch": "Velanja",
+      "totalFee": null,
+      "paidFee": null,
+      "mobile": ""
+    },
+    {
+      "id": "S079",
+      "name": "Kevadiya varmi alpeshbhai",
+      "branch": "Velanja",
+      "totalFee": null,
+      "paidFee": null,
+      "mobile": ""
+    },
+    {
+      "id": "S080",
+      "name": "Goyani panth babubhai",
+      "branch": "Velanja",
+      "totalFee": null,
+      "paidFee": null,
+      "mobile": ""
+    },
+    {
+      "id": "S081",
+      "name": "Radadiya dravya rajeshbhai",
+      "branch": "Velanja",
+      "totalFee": null,
+      "paidFee": 5000.0,
+      "mobile": ""
+    },
+    {
+      "id": "S082",
+      "name": "Kyada rushabh kishorbhai",
+      "branch": "Velanja",
+      "totalFee": null,
+      "paidFee": 6000.0,
+      "mobile": ""
+    },
+    {
+      "id": "S083",
+      "name": "Mulani Vansh Hareshbhai",
+      "branch": "Velanja",
+      "totalFee": null,
+      "paidFee": null,
+      "mobile": ""
+    },
+    {
+      "id": "S084",
+      "name": "Ukani Smit Mukeshbhai",
+      "branch": "Velanja",
+      "totalFee": null,
+      "paidFee": 6000.0,
+      "mobile": ""
+    },
+    {
+      "id": "S085",
+      "name": "Kakani chand ankurbhai",
+      "branch": "Velanja",
+      "totalFee": null,
+      "paidFee": null,
+      "mobile": ""
+    },
+    {
+      "id": "S086",
+      "name": "Barvaliya disha rajeshbhai",
+      "branch": "Velanja",
+      "totalFee": null,
+      "paidFee": null,
+      "mobile": ""
+    },
+    {
+      "id": "S087",
+      "name": "Vekariya aayush anilbbai",
+      "branch": "Velanja",
+      "totalFee": null,
+      "paidFee": null,
+      "mobile": ""
+    },
+    {
+      "id": "S088",
+      "name": "Jodhani jash pareshbhai",
+      "branch": "Velanja",
+      "totalFee": null,
+      "paidFee": 6000.0,
+      "mobile": ""
+    },
+    {
+      "id": "S089",
+      "name": "Thesiya shaurya kamleshbhai",
+      "branch": "Velanja",
+      "totalFee": null,
+      "paidFee": null,
+      "mobile": ""
+    },
+    {
+      "id": "S090",
+      "name": "Ribadiya khushi rameshbhai",
+      "branch": "Velanja",
+      "totalFee": null,
+      "paidFee": 6000.0,
+      "mobile": ""
+    },
+    {
+      "id": "S091",
+      "name": "Kachhadiya yug ramjibhai",
+      "branch": "Velanja",
+      "totalFee": null,
+      "paidFee": 3000.0,
+      "mobile": ""
+    },
+    {
+      "id": "S092",
+      "name": "Lakkad sujal jagdishbhai",
+      "branch": "Velanja",
+      "totalFee": null,
+      "paidFee": 6000.0,
+      "mobile": ""
+    },
+    {
+      "id": "S093",
+      "name": "Koladiya shubham mukeshbhai",
+      "branch": "Velanja",
+      "totalFee": null,
+      "paidFee": null,
+      "mobile": ""
+    },
+    {
+      "id": "S094",
+      "name": "Gojariya om mukeshbhai",
+      "branch": "Velanja",
+      "totalFee": null,
+      "paidFee": null,
+      "mobile": ""
+    },
+    {
+      "id": "S095",
+      "name": "Pethani dharmik mehulbhai",
+      "branch": "Velanja",
+      "totalFee": null,
+      "paidFee": 7000.0,
+      "mobile": ""
+    },
+    {
+      "id": "S096",
+      "name": "Dholiya parth dineshbhai",
+      "branch": "Velanja",
+      "totalFee": null,
+      "paidFee": null,
+      "mobile": ""
+    },
+    {
+      "id": "S097",
+      "name": "Smit mukeshbhai ukani",
+      "branch": "Mission Road",
+      "totalFee": null,
+      "paidFee": 2500.0,
+      "mobile": ""
+    },
+    {
+      "id": "S098",
+      "name": "Hepin girishbhai butani",
+      "branch": "Mota Varachha",
+      "totalFee": null,
+      "paidFee": null,
+      "mobile": ""
+    },
+    {
+      "id": "S099",
+      "name": "JIYA HIMMAT BHAI GHEVARIYA",
+      "branch": "Velanja",
+      "totalFee": null,
+      "paidFee": 6000.0,
+      "mobile": ""
+    }
+  ],
+  "history": [
+    {
+      "date": "2026-04-14",
+      "velanja": 10000.0,
+      "mota": null,
+      "mission": null
+    },
+    {
+      "date": "2026-05-12",
+      "velanja": 10000.0,
+      "mota": null,
+      "mission": null
+    },
+    {
+      "date": "2026-05-27",
+      "velanja": 10000.0,
+      "mota": null,
+      "mission": null
+    },
+    {
+      "date": "2026-06-22",
+      "velanja": 10000.0,
+      "mota": null,
+      "mission": null
+    },
+    {
+      "date": "2026-07-20",
+      "velanja": 10000.0,
+      "mota": null,
+      "mission": null
+    },
+    {
+      "date": "2026-08-08",
+      "velanja": 5000.0,
+      "mota": 5000.0,
+      "mission": null
+    },
+    {
+      "date": "2026-08-19",
+      "velanja": null,
+      "mota": null,
+      "mission": 6000.0
+    }
+  ]
+}

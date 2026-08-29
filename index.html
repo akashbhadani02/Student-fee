@@ -1,0 +1,1524 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Student Fee Management</title>
+  <script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
+  <style>
+    :root {
+      --bg: #f5f7fb;
+      --card: #fff;
+      --text: #172033;
+      --muted: #697386;
+      --line: #e4e8ef;
+      --primary: #315efb;
+      --success: #159957;
+      --danger: #d33a3a;
+      --shadow: 0 8px 28px rgba(30, 45, 70, .08)
+    }
+
+    * {
+      box-sizing: border-box
+    }
+
+    body {
+      margin: 0;
+      font-family: Inter, Segoe UI, Arial, sans-serif;
+      background: var(--bg);
+      color: var(--text)
+    }
+
+    header {
+      background: #172554;
+      color: #fff;
+      padding: 18px 24px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 15px;
+      position: sticky;
+      top: 0;
+      z-index: 10
+    }
+
+    header h1 {
+      font-size: 21px;
+      margin: 0
+    }
+
+    header small {
+      opacity: .8
+    }
+
+    .wrap {
+      max-width: 1450px;
+      margin: auto;
+      padding: 22px
+    }
+
+    .tabs {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 18px;
+      flex-wrap: wrap
+    }
+
+    .tab {
+      border: 0;
+      background: #e9edf5;
+      color: #26324a;
+      padding: 10px 16px;
+      border-radius: 9px;
+      cursor: pointer;
+      font-weight: 600
+    }
+
+    .tab.active {
+      background: var(--primary);
+      color: #fff
+    }
+
+    .page {
+      display: none
+    }
+
+    .page.active {
+      display: block
+    }
+
+    .cards {
+      display: grid;
+      grid-template-columns: repeat(5, minmax(150px, 1fr));
+      gap: 14px;
+      margin-bottom: 18px
+    }
+
+    .card {
+      background: var(--card);
+      padding: 18px;
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      box-shadow: var(--shadow)
+    }
+
+    .card .label {
+      font-size: 12px;
+      color: var(--muted);
+      font-weight: 700;
+      text-transform: uppercase
+    }
+
+    .card .num {
+      font-size: 26px;
+      font-weight: 800;
+      margin-top: 7px
+    }
+
+    .panel {
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      box-shadow: var(--shadow);
+      padding: 18px;
+      margin-bottom: 18px
+    }
+
+    .toolbar {
+      display: flex;
+      gap: 9px;
+      flex-wrap: wrap;
+      align-items: center;
+      margin-bottom: 14px
+    }
+
+    input,
+    select {
+      border: 1px solid #cfd6e2;
+      border-radius: 8px;
+      padding: 9px 10px;
+      background: #fff;
+      color: var(--text)
+    }
+
+    button {
+      border: 0;
+      border-radius: 8px;
+      padding: 9px 13px;
+      cursor: pointer;
+      font-weight: 700
+    }
+
+    .primary {
+      background: var(--primary);
+      color: #fff
+    }
+
+    .success {
+      background: var(--success);
+      color: #fff
+    }
+
+    .danger {
+      background: var(--danger);
+      color: #fff
+    }
+
+    .secondary {
+      background: #e9edf5;
+      color: #24304a
+    }
+
+    .logout-btn {
+      background: #fff;
+      color: #b42318;
+      border: 1px solid rgba(255,255,255,.55);
+      padding: 9px 14px;
+      border-radius: 9px;
+      font-weight: 800;
+      white-space: nowrap;
+    }
+    .logout-btn:hover { opacity: .92; }
+    @media (max-width: 600px) {
+      header { padding: 13px 14px; }
+      header h1 { font-size: 17px; }
+      header small { display: none; }
+      .logout-btn { padding: 8px 10px; font-size: 13px; }
+    }
+
+    .table-wrap {
+      overflow: auto;
+      max-height: 66vh;
+      border: 1px solid var(--line);
+      border-radius: 10px
+    }
+
+    .history-table-wrap {
+      overflow-x: auto;
+      overflow-y: auto
+    }
+
+    .history-table-wrap table {
+      min-width: 760px
+    }
+
+    .history-table-wrap th,
+    .history-table-wrap td,
+    .history-table-wrap td.num {
+      text-align: left
+    }
+
+    table {
+      border-collapse: collapse;
+      width: 100%;
+      min-width: 900px;
+      background: #fff
+    }
+
+    th,
+    td {
+      padding: 10px 9px;
+      border-bottom: 1px solid var(--line);
+      text-align: left;
+      font-size: 13px
+    }
+
+    th {
+      background: #f0f3f8;
+      position: sticky;
+      top: 0;
+      z-index: 2
+    }
+
+    td.num {
+      text-align: right
+    }
+
+    tr:hover td {
+      background: #fafbfe
+    }
+
+    .badge {
+      padding: 4px 8px;
+      border-radius: 999px;
+      font-size: 11px;
+      font-weight: 800
+    }
+
+    .paid {
+      background: #dff6e8;
+      color: #13753f
+    }
+
+    .partial {
+      background: #fff0c9;
+      color: #8a6200
+    }
+
+    .due {
+      background: #ffe1e1;
+      color: #9f2525
+    }
+
+    .muted {
+      color: var(--muted)
+    }
+
+    .grid2 {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 18px
+    }
+
+    .hint {
+      font-size: 12px;
+      color: var(--muted);
+      line-height: 1.5
+    }
+
+    .empty {
+      padding: 30px;
+      text-align: center;
+      color: var(--muted)
+    }
+
+    .file-label {
+      display: inline-block
+    }
+
+    .file-label input {
+      display: none
+    }
+
+    .toast {
+      position: fixed;
+      right: 18px;
+      bottom: 18px;
+      background: #172033;
+      color: #fff;
+      padding: 12px 15px;
+      border-radius: 10px;
+      box-shadow: var(--shadow);
+      display: none;
+      z-index: 50
+    }
+
+    @media(max-width:900px) {
+      .cards {
+        grid-template-columns: repeat(2, 1fr)
+      }
+
+      .grid2 {
+        grid-template-columns: 1fr
+      }
+
+      .wrap {
+        padding: 12px
+      }
+    }
+
+    @media(max-width:520px) {
+      .cards {
+        grid-template-columns: 1fr
+      }
+
+      header {
+        padding: 14px
+      }
+
+      .wrap {
+        padding: 9px
+      }
+    }
+
+    .branch-velanja td:first-child {
+      border-left: 5px solid #f59e0b
+    }
+
+    .branch-mota td:first-child {
+      border-left: 5px solid #8b5cf6
+    }
+
+    .branch-mission td:first-child {
+      border-left: 5px solid #10b981
+    }
+
+    .branch-badge {
+      display: inline-block;
+      padding: 4px 8px;
+      border-radius: 999px;
+      font-size: 11px;
+      font-weight: 800
+    }
+
+    .branch-badge.velanja {
+      background: #fff1cf;
+      color: #8a5a00
+    }
+
+    .branch-badge.mota {
+      background: #eee6ff;
+      color: #5b21b6
+    }
+
+    .branch-badge.mission {
+      background: #dff7ea;
+      color: #087443
+    }
+
+    /* Page password lock */
+    #pagePasswordLock {
+      position: fixed;
+      inset: 0;
+      z-index: 999999;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: linear-gradient(135deg, #172554, #315efb);
+      padding: 20px
+    }
+
+    #pagePasswordCard {
+      width: min(390px, 100%);
+      background: #fff;
+      border-radius: 18px;
+      padding: 28px;
+      box-shadow: 0 20px 70px rgba(0, 0, 0, .25);
+      text-align: center
+    }
+
+    #pagePasswordCard h2 {
+      margin: 0 0 8px;
+      color: #172033
+    }
+
+    #pagePasswordCard p {
+      margin: 0 0 20px;
+      color: #697386;
+      font-size: 14px
+    }
+
+    #pagePasswordInput {
+      width: 100%;
+      padding: 12px 13px;
+      border: 1px solid #cfd6e2;
+      border-radius: 9px;
+      font-size: 16px;
+      outline: none;
+      margin-bottom: 10px
+    }
+
+    #pagePasswordInput:focus {
+      border-color: #315efb;
+      box-shadow: 0 0 0 3px rgba(49, 94, 251, .12)
+    }
+
+    #pagePasswordBtn {
+      width: 100%;
+      background: #315efb;
+      color: #fff;
+      padding: 12px;
+      border-radius: 9px;
+      font-size: 15px
+    }
+
+    #pagePasswordError {
+      display: none;
+      color: #d33a3a;
+      font-size: 13px;
+      margin: 8px 0 0
+    }
+
+    body.page-locked {
+      overflow: hidden
+    }
+
+    /* Secure password inputs: native typing + separate visual mask. */
+    .secure-password-wrap {
+      position: relative;
+      display: flex;
+      align-items: center;
+      width: 100%
+    }
+
+    .secure-password-input {
+      width: 100%;
+      box-sizing: border-box;
+      padding-right: 44px !important;
+      padding-left: 13px !important;
+      position: relative;
+      z-index: 2;
+      background: transparent !important;
+      text-align: left !important;
+      letter-spacing: normal !important;
+      font-family: inherit !important;
+      font-size: 16px !important;
+      line-height: 1.2 !important;
+      color: transparent !important;
+      -webkit-text-fill-color: transparent !important;
+      caret-color: transparent !important;
+    }
+
+    .secure-password-input.password-visible {
+      color: #111 !important;
+      -webkit-text-fill-color: #111 !important;
+      caret-color: #111 !important;
+    }
+
+    .secure-password-input::placeholder {
+      color: #9aa4b2 !important;
+      -webkit-text-fill-color: #9aa4b2 !important;
+      opacity: 1 !important
+    }
+
+    .secure-password-mask {
+      position: absolute;
+      left: 13px;
+      right: 44px;
+      top: 50%;
+      transform: translateY(-50%);
+      z-index: 3;
+      pointer-events: none;
+      white-space: nowrap;
+      overflow: hidden;
+      display: flex;
+      align-items: center;
+      font: inherit;
+      line-height: 1.2;
+      color: #111
+    }
+
+    .secure-password-mask .mask-caret {
+      display: inline-block;
+      width: 1.5px;
+      height: 1.15em;
+      background: #111;
+      margin-left: 1px;
+      animation: secureCaretBlink 1s steps(1) infinite
+    }
+
+    .secure-password-mask.hidden {
+      display: none
+    }
+
+    .secure-password-input.password-visible+.secure-password-mask {
+      display: none
+    }
+
+    @keyframes secureCaretBlink {
+      50% {
+        opacity: 0
+      }
+    }
+
+    .secure-password-eye {
+      position: absolute;
+      right: 6px;
+      top: 50%;
+      transform: translateY(-50%);
+      z-index: 4;
+      width: 34px;
+      height: 32px;
+      padding: 0;
+      border-radius: 7px;
+      background: transparent;
+      color: #4b5563;
+      font-size: 17px;
+      display: flex;
+      align-items: center;
+      justify-content: center
+    }
+
+    .secure-password-eye:hover {
+      background: #eef2f7
+    }
+
+    #securePasswordModal {
+      position: fixed;
+      inset: 0;
+      z-index: 1000001;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      background: rgba(10, 18, 35, .68);
+      padding: 18px
+    }
+
+    #securePasswordCard {
+      width: min(420px, 100%);
+      background: #fff;
+      border-radius: 16px;
+      padding: 22px;
+      box-shadow: 0 20px 70px rgba(0, 0, 0, .28)
+    }
+
+    #securePasswordCard h3 {
+      margin: 0 0 8px
+    }
+
+    #securePasswordCard .secure-password-wrap {
+      margin: 14px 0
+    }
+
+    #securePasswordCard .secure-password-input {
+      font-size: 16px;
+      padding: 12px 44px 12px 12px;
+      border: 1px solid #cfd6e2;
+      border-radius: 9px;
+      outline: none
+    }
+
+    #securePasswordCard .secure-password-input:focus {
+      border-color: #315efb;
+      box-shadow: 0 0 0 3px rgba(49, 94, 251, .12)
+    }
+
+    #securePasswordError {
+      display: none;
+      color: #d33a3a;
+      font-size: 13px;
+      margin: -4px 0 10px
+    }
+  </style>
+</head>
+
+<body class="page-locked">
+  <div id="pagePasswordLock" data-no-autofill="true">
+    <div id="pagePasswordCard">
+      <h2>🔐 Password Required</h2>
+      <div style="display:flex;gap:8px;margin-bottom:14px"><button type="button" class="primary" id="mainLoginMode">Main Admin</button><button type="button" class="secondary" id="branchLoginMode">Branch Login</button></div><p id="loginHint">Student Fee Management open કરવા main admin password નાખો.</p>
+      <div class="secure-password-wrap" style="margin-bottom:10px">
+        <input id="pagePasswordInput" class="secure-password-input" type="password" inputmode="text" autocomplete="new-password" name="page-access-password"
+          autocapitalize="off" spellcheck="false" placeholder="Enter password">
+        <span class="secure-password-mask" aria-hidden="true"><span class="mask-dots"></span><span
+            class="mask-caret"></span></span>
+        <button class="secure-password-eye" type="button" aria-label="Show password"
+          onclick="toggleSecureInput('pagePasswordInput',this)">👁</button>
+      </div>
+      <div id="branchLoginFields" style="display:none;margin-bottom:10px"><label style="display:block;margin-bottom:8px">Branch<select id="branchLoginBranch" style="width:100%;margin-top:5px"><option value="">Loading branches...</option></select></label><input id="branchUsername" placeholder="Branch Username" autocomplete="username" style="width:100%;margin-bottom:8px"><div class="secure-password-wrap"><input id="branchPassword" class="secure-password-input" type="password" placeholder="Branch Password" autocomplete="current-password" style="width:100%;padding-right:44px"><button class="secure-password-eye" type="button" onclick="toggleSecureInput('branchPassword',this)">👁</button></div></div><button id="pagePasswordBtn" type="button">Open Page</button>
+      <div id="pagePasswordError">Wrong password. Please try again.</div>
+    </div>
+  </div>
+  <script>
+    /* Separate password system. Each protected action has its own password. */
+    let ADMIN_PASSWORDS = {};
+    let ACCESS = { type: 'main' };
+    let BRANCH_TOKEN = localStorage.getItem('feesBranchToken') || '';
+    const PASSWORD_KEYS = {
+      pageOpen: 'Page Open', studentAdd: 'Student Add', studentEdit: 'Student Edit', studentDelete: 'Student Delete',
+      collectionAdd: 'Collection Add', collectionEdit: 'Collection Edit', collectionDelete: 'Collection Delete',
+      excelExport: 'Excel Export', excelImport: 'Excel Import'
+    };
+
+    async function verifyPassword(key, password) {
+      const res = await fetch("/api/auth", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "verify", key, password }) });
+      if (!res.ok) return false;
+      const data = await res.json();
+      return data.ok === true;
+    }
+
+    (function () {
+      const lock = document.getElementById("pagePasswordLock");
+      const input = document.getElementById("pagePasswordInput");
+      const btn = document.getElementById("pagePasswordBtn");
+      const error = document.getElementById("pagePasswordError");
+
+      async function unlock() {
+        btn.disabled = true; btn.textContent = "Checking..."; error.style.display = "none";
+        try {
+          if (window._loginMode === 'branch') {
+            const username = document.getElementById('branchUsername').value.trim();
+            const password = document.getElementById('branchPassword').value;
+            const res = await fetch('/api/auth',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'branchLogin',username,password})});
+            const data = await res.json(); if(!res.ok || !data.ok) throw new Error(data.error || 'Invalid login');
+            BRANCH_TOKEN=data.token; localStorage.setItem('feesBranchToken',BRANCH_TOKEN); ACCESS=data.user;
+            lock.remove(); document.body.classList.remove('page-locked'); applyAccessUI(); loadState(); loadBranches(); return;
+          }
+          const password = getSecureValue(input);
+          if (await verifyPassword("pageOpen", password)) {
+            ADMIN_PASSWORDS.pageOpen = password; ACCESS={type:'main'};
+            input.value = ""; input.dataset.passwordVisible = "false"; input.type = "password";
+            lock.remove(); document.body.classList.remove("page-locked"); applyAccessUI(); loadState(); loadBranches();
+          } else { error.style.display = "block"; input.value = ""; input.focus(); }
+        } catch (e) { error.textContent = e.message || "Server connection failed. Please try again."; error.style.display = "block"; }
+        finally { btn.disabled = false; btn.textContent = "Open Page"; }
+      }
+      async function loadBranchLoginChoices(){try{const r=await fetch('/api/public-branches',{cache:'no-store'}),d=await r.json();if(!r.ok)throw Error(d.error||'Branch list failed');const sel=document.getElementById('branchLoginBranch');sel.innerHTML=(d.branches||[]).map(b=>`<option value="${esc(b._id)}" data-username="${esc(b.username)}">${esc(b.name)}</option>`).join('')||'<option value="">No active branches</option>';const sync=()=>{const o=sel.selectedOptions[0];if(o?.dataset.username)document.getElementById('branchUsername').value=o.dataset.username;};sel.onchange=sync;sync();}catch(e){document.getElementById('branchLoginBranch').innerHTML='<option value="">Unable to load branches</option>';}}
+      window._loginMode='main'; document.getElementById('mainLoginMode').onclick=()=>{window._loginMode='main';document.getElementById('branchLoginFields').style.display='none';document.getElementById('pagePasswordInput').style.display='block';document.getElementById('loginHint').textContent='Student Fee Management open કરવા main admin password નાખો.';}; document.getElementById('branchLoginMode').onclick=()=>{window._loginMode='branch';document.getElementById('branchLoginFields').style.display='block';document.getElementById('pagePasswordInput').style.display='none';document.getElementById('loginHint').textContent='તમારી branch select કરો અને username/password નાખો.';loadBranchLoginChoices();};
+      btn.addEventListener("click", unlock); input.addEventListener("keydown", e => { if (e.key === "Enter") unlock(); });
+      if(BRANCH_TOKEN){ fetch('/api/state',{headers:{Authorization:'Bearer '+BRANCH_TOKEN}}).then(r=>{if(!r.ok)throw Error('expired');return r.json()}).then(d=>{ACCESS=d.access||ACCESS;lock.remove();document.body.classList.remove('page-locked');applyAccessUI();loadState();}).catch(()=>{BRANCH_TOKEN='';localStorage.removeItem('feesBranchToken');}); }
+      setTimeout(() => input.focus(), 50);
+    })();
+  </script>
+
+  <!-- Secure password dialog. Passwords are masked immediately; the eye button is the only way to reveal them. -->
+  <div id="securePasswordModal" data-no-autofill="true">
+    <div id="securePasswordCard">
+      <h3 id="securePasswordTitle">🔐 Password Required</h3>
+      <div id="securePasswordHint" class="hint">Enter password</div>
+      <div class="secure-password-wrap">
+        <input id="securePasswordInput" class="secure-password-input" type="password" autocomplete="new-password" name="action-password"
+          autocapitalize="off" spellcheck="false">
+        <span class="secure-password-mask" aria-hidden="true"><span class="mask-dots"></span><span
+            class="mask-caret"></span></span>
+        <button id="securePasswordEye" class="secure-password-eye" type="button" aria-label="Show password">👁</button>
+      </div>
+      <div id="securePasswordError"></div>
+      <div style="display:flex;justify-content:flex-end;gap:9px">
+        <button id="securePasswordCancel" class="secondary" type="button">Cancel</button>
+        <button id="securePasswordOk" class="primary" type="button">Continue</button>
+      </div>
+    </div>
+  </div>
+  <script>
+    /* Password masking: keep the real value in the native input, but visually render only dots. */
+    function updateSecureMask(input) {
+      if (!input) return;
+      const mask = input.parentElement?.querySelector('.secure-password-mask');
+      if (!mask) return;
+      const dots = mask.querySelector('.mask-dots');
+      if (dots) dots.textContent = '•'.repeat(input.value.length);
+      mask.classList.toggle('hidden', input.dataset.passwordVisible === 'true' || (!input.matches(':focus') && input.value.length === 0));
+    }
+    function getSecureValue(input) { return input ? input.value : ''; }
+    function setSecureValue(input, value) {
+      if (!input) return;
+      input.value = String(value || '');
+      updateSecureMask(input);
+    }
+    function initSecureInput(input) {
+      if (!input || input.dataset.secureInit === 'true') return;
+      input.dataset.secureInit = 'true';
+      input.dataset.passwordVisible = 'false';
+      // Use a native password control so Chrome/Edge do not treat this as a normal text field.
+      input.type = 'password';
+      input.setAttribute('inputmode', 'text');
+      input.setAttribute('autocomplete', 'new-password');
+      input.setAttribute('name', input.id === 'pagePasswordInput' ? 'page-access-password' : 'action-password');
+      input.setAttribute('autocapitalize', 'off');
+      input.setAttribute('spellcheck', 'false');
+      updateSecureMask(input);
+      input.addEventListener('input', () => updateSecureMask(input));
+      input.addEventListener('focus', () => updateSecureMask(input));
+      input.addEventListener('blur', () => updateSecureMask(input));
+    }
+    function toggleSecureInput(inputId, eyeBtn) {
+      const input = document.getElementById(inputId);
+      if (!input) return;
+      initSecureInput(input);
+      const visible = input.dataset.passwordVisible !== 'true';
+      input.dataset.passwordVisible = visible ? 'true' : 'false';
+      input.type = visible ? 'text' : 'password';
+      input.classList.toggle('password-visible', visible);
+      eyeBtn.textContent = visible ? '🙈' : '👁';
+      eyeBtn.setAttribute('aria-label', visible ? 'Hide password' : 'Show password');
+      updateSecureMask(input);
+      input.focus();
+      try { input.setSelectionRange(input.value.length, input.value.length); } catch (e) { }
+    }
+    document.querySelectorAll('.secure-password-input').forEach(initSecureInput);
+
+    function securePasswordPrompt(title, hint) {
+      return new Promise(resolve => {
+        const modal = document.getElementById('securePasswordModal'), input = document.getElementById('securePasswordInput'), eye = document.getElementById('securePasswordEye'), ok = document.getElementById('securePasswordOk'), cancel = document.getElementById('securePasswordCancel'), error = document.getElementById('securePasswordError');
+        initSecureInput(input);
+        document.getElementById('securePasswordTitle').textContent = title || '🔐 Password Required';
+        document.getElementById('securePasswordHint').textContent = hint || 'Enter password';
+        input.dataset.realValue = ''; input.dataset.passwordVisible = 'false'; input.classList.remove('password-visible'); eye.textContent = '👁'; error.style.display = 'none'; error.textContent = ''; updateSecureMask(input);
+        modal.style.display = 'flex'; document.body.classList.add('page-locked'); setTimeout(() => input.focus(), 30);
+        let done = false;
+        const finish = value => {
+          if (done) return;
+          done = true;
+          // Never leave a typed password in a hidden dialog after closing it.
+          const returned = value;
+          input.value = '';
+          input.dataset.passwordVisible = 'false';
+          input.type = 'password';
+          input.classList.remove('password-visible');
+          updateSecureMask(input);
+          modal.style.display = 'none';
+          document.body.classList.remove('page-locked');
+          cleanup();
+          resolve(returned);
+        };
+        const submit = () => { const value = getSecureValue(input); if (!value) { error.textContent = 'Password required.'; error.style.display = 'block'; input.focus(); return; } finish(value); };
+        const onKey = e => { if (e.key === 'Enter') { e.preventDefault(); submit(); } else if (e.key === 'Escape') { e.preventDefault(); finish(null); } };
+        const cancelFn = () => finish(null);
+        const cleanup = () => { ok.removeEventListener('click', submit); cancel.removeEventListener('click', cancelFn); input.removeEventListener('keydown', onKey); };
+        ok.addEventListener('click', submit); cancel.addEventListener('click', cancelFn); input.addEventListener('keydown', onKey);
+      });
+    }
+  </script>
+
+  <header>
+    <div>
+      <h1>Student Fee Management</h1><small>Actual data tracker • Excel import/export</small>
+    </div>
+    <div style="display:flex;align-items:center;gap:10px">
+      <div id="lastSaved"></div>
+      <button type="button" class="logout-btn" id="logoutBtn" onclick="logoutUser()">↪ Logout</button>
+    </div>
+  </header>
+  <div class="wrap">
+    <div class="tabs">
+      <button class="tab active" data-page="dashboard">Dashboard</button>
+      <button class="tab" data-page="students">Students</button>
+      <button class="tab" data-page="history">Collection History</button><button class="tab main-only" data-page="branches">Branches & Access</button>
+      <!-- <button class="tab" data-page="excel">Excel / Backup</button> -->
+    </div>
+
+    <section id="dashboard" class="page active">
+      <div class="panel" style="margin-bottom:18px">
+        <div class="toolbar" style="margin:0">
+          <button class="primary" onclick="exportXlsx()" data-permission="excelExport">⬇ Export All Data Excel</button>
+          <label class="file-label" style="cursor:pointer">
+            <span class="success"
+              style="display:inline-block;padding:10px 14px;border-radius:10px;font-weight:700;cursor:pointer">⬆ Import
+              Same Excel</span>
+            <input id="importFileDash" type="file" accept=".xlsx,.xls" style="display:none">
+          </label>
+          <!-- <span class="hint"><b>એક જ Excel file:</b> Student Data + Branch + Fee + Paid + <b>25% + Remaining + Status + Summary formulas</b> + Collection History. <b>Student ID Excelમાં દેખાશે નહીં.</b> Excelમાં change/new row કરો → Save → Import → websiteનો data તરત update થશે અને IDs row-wise automatic બનશે.</span> -->
+        </div>
+      </div>
+      <div class="cards">
+        <div class="card">
+          <div class="label">Total Students</div>
+          <div class="num" id="dStudents">0</div>
+        </div>
+        <div class="card">
+          <div class="label">Total Fee</div>
+          <div class="num" id="dTotal">₹0</div>
+        </div>
+        <div class="card">
+          <div class="label">Paid Fee</div>
+          <div class="num" id="dPaid">₹0</div>
+        </div>
+        <div class="card">
+          <div class="label">Paid Fee 25%</div>
+          <div class="num" id="d25">₹0</div>
+        </div>
+        <div class="card">
+          <div class="label">Remaining</div>
+          <div class="num" id="dRemain">₹0</div>
+        </div>
+      </div>
+      <div class="grid2">
+        <div class="panel">
+          <h3>Branch-wise</h3>
+          <div id="branchCards"></div>
+        </div>
+        <div class="panel">
+          <h3>Recent Collection</h3>
+          <div id="recentHistory"></div>
+        </div>
+      </div>
+    </section>
+
+    <section id="students" class="page">
+      <div class="panel">
+        <div class="toolbar">
+          <input id="search" placeholder="Search student..." style="min-width:220px">
+          <select id="branchFilter">
+            <option value="">All Branches</option>
+            <option>Velanja</option>
+            <option>Mota Varachha</option>
+            <option>Mission Road</option>
+            <option value="__blank">Unassigned</option>
+          </select>
+          <button class="primary" onclick="addStudent()" data-permission="studentAdd">+ Add Student</button>
+          <button class="secondary" onclick="exportXlsx()" data-permission="excelExport">Export Actual .xlsx</button>
+          <label class="file-label"><button class="success" type="button">Import .xlsx</button><input id="importFile"
+              type="file" accept=".xlsx,.xls"></label>
+        </div>
+        <!-- <div class="hint" style="margin-bottom:12px">Excel export contains <b>all actual data in one editable All Data sheet</b>: students, branches, fees, paid amounts, collection history and formulas. Edit the exported file, save it as <b>.xlsx</b>, then import that same file to update the website.</div> -->
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>ID</th>
+                <th>Student Name</th>
+                <th>Mobile Number</th>
+                <th>Branch</th>
+                <th>Total Fee</th>
+                <th>Paid Fee</th>
+                <th>Paid Fee 25%</th>
+                <th>Remaining</th>
+                <th>Status</th>
+                <th>Action</th>
+              </tr>
+            </thead>
+            <tbody id="studentBody"></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <section id="history" class="page">
+      <div class="panel">
+        <div class="toolbar"><button class="primary" onclick="addHistory()" data-permission="collectionAdd">+ Add Collection</button><button
+            class="secondary" onclick="exportXlsx()" data-permission="excelExport">Export .xlsx</button><button class="secondary"
+            onclick="openPasswordSettings()">🔐 Password Change</button></div>
+        <div class="table-wrap history-table-wrap" id="historyTableWrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Date</th>
+                <th>Velanja</th>
+                <th>Mota Varachha</th>
+                <th>Mission Road</th>
+                <th>Total</th>
+                <th>Action</th>
+              </tr>
+            </thead>
+            <tbody id="historyBody"></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <section id="branches" class="page main-only"><div class="panel"><div class="toolbar"><button class="primary" onclick="addBranchAccess()">+ Add Branch & Login</button><button class="secondary" onclick="loadBranches()">↻ Refresh</button></div><p class="hint">Main Admin અહીં branch બનાવશે અને દરેક branch માટે અલગ username/password તથા view/action permissions આપશે.</p><div class="table-wrap"><table><thead><tr><th>Branch</th><th>Code</th><th>Login</th><th>Permissions</th><th>Status</th><th>Action</th></tr></thead><tbody id="branchAccessBody"></tbody></table></div></div></section>
+
+    <section id="excel" class="page">
+      <div class="panel">
+        <h2>Actual Excel workflow</h2>
+        <p>આ projectમાં template-only export નથી. Export થતી Excelમાં હાલ websiteમાં રહેલો actual student data, branch,
+          fee values અને collection history આવે છે.</p>
+        <ol>
+          <li><b>Export Actual .xlsx</b> કરો.</li>
+          <li>Excelની <b>Students</b> sheetમાં Name / Branch / Total Fee / Paid Fee edit કરો. Existing ID same રાખશો તો
+            એ જ student update થશે.</li>
+          <li>નવી row ઉમેરશો તો blank ID રાખી શકો; import વખતે ID auto-generate થશે.</li>
+          <li>એ જ <b>All Data</b> sheetના Collection History sectionમાં date/branch collection edit અથવા નવી row add કરી
+            શકો.</li>
+          <li>Excel save કરીને એ જ file <b>Import .xlsx</b> કરો. Website state actual Excel values પ્રમાણે rebuild થશે.
+          </li>
+        </ol>
+        <p><b>Excelમાં પણ automatic calculation છે:</b> Total Fee અને Paid Fee edit કરશો તો <b>Paid Fee 25%</b>,
+          <b>Remaining</b>, <b>Status</b>, Summary totals અને branch counts Excel formulasથી automatic recalculate થશે.
+          <b>Student ID Excelમાં નહીં આવે; website import વખતે row-wise automatic generate થશે.</b></p>
+        <p class="hint">Paid Fee 25% અને Remaining website/Excel formulasથી automatic ગણાય છે. Original supplied
+          workbookમાં Total Fee values blank હોવાથી dashboardનું Total Fee શરૂઆતમાં ₹0 રહેશે; તમે Excel અથવા Students
+          screenથી Total Fee ભરી શકો છો.</p>
+        <hr>
+        <h3>Current data counts</h3>
+        <div id="excelInfo"></div>
+      </div>
+    </section>
+  </div>
+  <div id="branchFormModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:10000;padding:18px;overflow:auto"><div class="panel" style="max-width:720px;margin:4vh auto"><h3 id="branchFormTitle">🏢 Add Branch</h3><div id="branchFormError" class="error" style="display:none"></div><div style="display:grid;grid-template-columns:1fr 1fr;gap:12px"><label>Branch Name<input id="bfName"></label><label>Branch Code<input id="bfCode"></label><label>Login Username<input id="bfUsername"></label><label>Password<input id="bfPassword" type="text" autocomplete="off"></label><label style="display:flex;align-items:center;gap:8px"><input id="bfActive" type="checkbox" checked style="width:auto"> Active</label></div><div style="margin-top:16px"><b>Permissions</b><div id="bfPermissions" style="display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin-top:10px"></div></div><div style="display:flex;justify-content:flex-end;gap:10px;margin-top:18px"><button class="secondary" onclick="closeBranchForm()">Cancel</button><button class="primary" onclick="saveBranchForm()">Save Branch</button></div></div></div>
+  <div id="studentFormModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:9999;padding:18px;overflow:auto"><div class="panel" style="max-width:560px;margin:5vh auto"><h3 id="studentFormTitle">👨‍🎓 Add Student</h3><div id="studentFormError" class="error" style="display:none"></div><div style="display:grid;gap:10px"><label>Student Name<input id="sfName"></label><label>Mobile Number<input id="sfMobile"></label><label>Branch<select id="sfBranch"></select></label><label>Total Fee<input id="sfTotal" type="number"></label><label>Paid Fee<input id="sfPaid" type="number"></label></div><div style="display:flex;justify-content:flex-end;gap:10px;margin-top:18px"><button class="secondary" onclick="closeStudentForm()">Cancel</button><button class="primary" onclick="saveStudentForm()">Save Student</button></div></div></div>
+  <div id="confirmModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:10001;padding:18px"><div class="panel" style="max-width:460px;margin:15vh auto"><h3 id="confirmTitle">Confirm</h3><p id="confirmText"></p><label style="display:flex;gap:8px;align-items:center;margin:14px 0"><input id="confirmCheck" type="checkbox" style="width:auto"> <span>I understand this action.</span></label><div style="display:flex;justify-content:flex-end;gap:10px"><button class="secondary" onclick="closeConfirm(false)">Cancel</button><button class="danger" id="confirmYes" onclick="closeConfirm(true)" disabled>Continue</button></div></div></div>
+  <div id="passwordSettingsModal"
+    style="display:none;position:fixed;inset:0;z-index:999998;background:rgba(10,18,35,.62);padding:18px;overflow:auto">
+    <div
+      style="width:min(720px,100%);margin:5vh auto;background:#fff;border-radius:16px;box-shadow:0 25px 80px rgba(0,0,0,.25);padding:22px">
+      <div style="display:flex;justify-content:space-between;align-items:center;gap:12px">
+        <div>
+          <h2 style="margin:0">🔐 Password Change</h2>
+          <div class="hint">Master passwordથી આ list ખોલો. દરેક actionનો password અલગ છે.</div>
+        </div><button class="secondary" onclick="closePasswordSettings()">✕</button>
+      </div>
+      <div id="passwordSettingsBody" style="margin-top:18px"></div>
+      <div style="display:flex;justify-content:flex-end;gap:9px;margin-top:18px"><button class="secondary"
+          onclick="closePasswordSettings()">Cancel</button><button class="primary" onclick="savePasswordSettings()">Save
+          Passwords</button></div>
+    </div>
+  </div>
+  <div id="toast" class="toast"></div>
+
+  <script>
+    const INITIAL = { "students": [{ "id": "S001", "name": "Sangnani Dhruvi Brijeshbhai", "branch": "Mota Varachha", "totalFee": null, "paidFee": null }, { "id": "S002", "name": "Savaliya Lax Jaysukhbhai", "branch": "Mota Varachha", "totalFee": null, "paidFee": null }, { "id": "S003", "name": "Bagda Aryan Mukeshbhai", "branch": "Mota Varachha", "totalFee": null, "paidFee": null }, { "id": "S004", "name": "Talaviya Gracy Mehulbhai", "branch": "Mission Road", "totalFee": null, "paidFee": 4500.0 }, { "id": "S005", "name": "Bukhani Jenee Ghnshayambhai", "branch": "Mission Road", "totalFee": null, "paidFee": 4500.0 }, { "id": "S006", "name": "Gelani Mantra Ankitbhai", "branch": "Mission Road", "totalFee": null, "paidFee": 3500.0 }, { "id": "S007", "name": "Patoliya Vrushti Hiteshbhai", "branch": "Velanja", "totalFee": null, "paidFee": 6000.0 }, { "id": "S008", "name": "Sojitra Nehanshi Maheshbhai", "branch": "Velanja", "totalFee": null, "paidFee": 8500.0 }, { "id": "S009", "name": "Shekhda Ami Hiteshbhai", "branch": "Velanja", "totalFee": null, "paidFee": 6000.0 }, { "id": "S010", "name": "Rafaliya Harmisha Kishanbhai", "branch": "Velanja", "totalFee": null, "paidFee": 6000.0 }, { "id": "S011", "name": "Umretiya Jilan Prakashbhai", "branch": "Velanja", "totalFee": null, "paidFee": 6000.0 }, { "id": "S012", "name": "Kathiriya Feni Nileshbhai", "branch": "Velanja", "totalFee": null, "paidFee": 6000.0 }, { "id": "S013", "name": "Desai Brinda Prakashbhai", "branch": "Velanja", "totalFee": null, "paidFee": 6000.0 }, { "id": "S014", "name": "Parmar Trupti Ramjibhai", "branch": "Velanja", "totalFee": null, "paidFee": 6000.0 }, { "id": "S015", "name": "Khokhar Dharmi Rajnibhai", "branch": "Velanja", "totalFee": null, "paidFee": 5000.0 }, { "id": "S016", "name": "Lakhani Jenee Satishbhai", "branch": "Velanja", "totalFee": null, "paidFee": 8000.0 }, { "id": "S017", "name": "Khokhar Mahek Vijaybhai", "branch": "Velanja", "totalFee": null, "paidFee": 6000.0 }, { "id": "S018", "name": "Rupapara Dharmi Rajnishbhai", "branch": "Velanja", "totalFee": null, "paidFee": 6000.0 }, { "id": "S019", "name": "Patel Riddhi Hiteshbhai", "branch": "Velanja", "totalFee": null, "paidFee": 6000.0 }, { "id": "S020", "name": "Nonghanvadra Devangi Rohitbhai", "branch": "Velanja", "totalFee": null, "paidFee": 3000.0 }, { "id": "S021", "name": "Koladiya Deep Rajnibhai", "branch": "Velanja", "totalFee": null, "paidFee": 5000.0 }, { "id": "S022", "name": "Patoliya Vansh Hiteshbhai", "branch": "Velanja", "totalFee": null, "paidFee": 6000.0 }, { "id": "S023", "name": "Savaliya Vraj Chetanbhai", "branch": "Velanja", "totalFee": null, "paidFee": 6500.0 }, { "id": "S024", "name": "Zalavadiya Ursh Dineshbhai", "branch": "Velanja", "totalFee": null, "paidFee": 4000.0 }, { "id": "S025", "name": "Madhani Jay Jamanbhai", "branch": "Velanja", "totalFee": null, "paidFee": 6000.0 }, { "id": "S026", "name": "Thummar Vraj Maheshbhai", "branch": "Velanja", "totalFee": null, "paidFee": null }, { "id": "S027", "name": "Bhanderi Vasu Hiteshbhai", "branch": "Velanja", "totalFee": null, "paidFee": 6000.0 }, { "id": "S028", "name": "Joshi Dhaval Tineshbhai", "branch": "Velanja", "totalFee": null, "paidFee": 6000.0 }, { "id": "S029", "name": "Vekariya Hitanshu Ghanshayambhai", "branch": "Velanja", "totalFee": null, "paidFee": null }, { "id": "S030", "name": "Ghadiya Vibhaben Manharbhai", "branch": "Velanja", "totalFee": null, "paidFee": null }, { "id": "S031", "name": "Patel Pranali Sanjaybhai", "branch": "Velanja", "totalFee": null, "paidFee": null }, { "id": "S032", "name": "Vataliya Punam Vanrajbhai", "branch": "Velanja", "totalFee": null, "paidFee": 6000.0 }, { "id": "S033", "name": "Gajera Prajesh Vinubhai", "branch": "Velanja", "totalFee": null, "paidFee": 6000.0 }, { "id": "S034", "name": "Kathiriya Vraj Gopalbhai", "branch": "Velanja", "totalFee": null, "paidFee": 6000.0 }, { "id": "S035", "name": "Malani Netra Rajeshbhai", "branch": "Velanja", "totalFee": null, "paidFee": 6000.0 }, { "id": "S036", "name": "Chakrani Vishubh Rasikbhai", "branch": "Velanja", "totalFee": null, "paidFee": null }, { "id": "S037", "name": "Ramani Akhil Sanjaybhai", "branch": "Velanja", "totalFee": null, "paidFee": 6000.0 }, { "id": "S038", "name": "Gamit Sneha Shantubhai", "branch": "Velanja", "totalFee": null, "paidFee": null }, { "id": "S039", "name": "Ramani Purvit Mileshbhai", "branch": "Velanja", "totalFee": null, "paidFee": null }, { "id": "S040", "name": "Sabhadiya Prince Anilbhai", "branch": "Velanja", "totalFee": null, "paidFee": 6000.0 }, { "id": "S041", "name": "Senjaliya Jeel Alpeshbhai", "branch": "Velanja", "totalFee": null, "paidFee": 6000.0 }, { "id": "S042", "name": "Sojitra Utsav Sanjaybhai", "branch": "Velanja", "totalFee": null, "paidFee": 6000.0 }, { "id": "S043", "name": "goyani dharman manojbhai", "branch": "Velanja", "totalFee": null, "paidFee": 6000.0 }, { "id": "S044", "name": "pavan jaat", "branch": "Velanja", "totalFee": null, "paidFee": 6000.0 }, { "id": "S045", "name": "Dobariya Naksh Nareshbhai", "branch": "Velanja", "totalFee": null, "paidFee": null }, { "id": "S046", "name": "Kevadiya nirva chetanbhai", "branch": "Mota Varachha", "totalFee": null, "paidFee": null }, { "id": "S047", "name": "Vaghasiya Yash Rakeshbhai", "branch": "Mota Varachha", "totalFee": null, "paidFee": null }, { "id": "S048", "name": "Navadiya Dishank Krunalbhai", "branch": "Mota Varachha", "totalFee": null, "paidFee": null }, { "id": "S049", "name": "Pansheriya jay sanjaybhai", "branch": "Mission Road", "totalFee": null, "paidFee": 5500.0 }, { "id": "S050", "name": "Bhunagliya arvi rameshbhai", "branch": "Mota Varachha", "totalFee": null, "paidFee": null }, { "id": "S051", "name": "Vadadoriya sakshi manojbhai", "branch": "Mota Varachha", "totalFee": null, "paidFee": null }, { "id": "S052", "name": "Kamani jensi bhavesh bhai", "branch": "Velanja", "totalFee": null, "paidFee": null }, { "id": "S053", "name": "Kukadiya riddhi sanjaybhai", "branch": "Velanja", "totalFee": null, "paidFee": null }, { "id": "S054", "name": "Talaviya Tithi Jayeshbhai", "branch": "Mota Varachha", "totalFee": null, "paidFee": null }, { "id": "S055", "name": "Lathiya netra girishbhai", "branch": "Mota Varachha", "totalFee": null, "paidFee": null }, { "id": "S056", "name": "Baldha jal lalitkumar", "branch": "Velanja", "totalFee": null, "paidFee": 6000.0 }, { "id": "S057", "name": "Gediya om peadipbhai", "branch": "Velanja", "totalFee": null, "paidFee": 5500.0 }, { "id": "S058", "name": "Jiyani rudra bhaveshbhai", "branch": "Velanja", "totalFee": null, "paidFee": 6000.0 }, { "id": "S059", "name": "Vekariya ritva nileshbhai", "branch": "Velanja", "totalFee": null, "paidFee": null }, { "id": "S060", "name": "Borda dharmi dharmeshbhai", "branch": "Velanja", "totalFee": null, "paidFee": 6000.0 }, { "id": "S061", "name": "Radadiya yash nileshbhai", "branch": "Velanja", "totalFee": null, "paidFee": 6000.0 }, { "id": "S062", "name": "Savaliya ved kantibhai", "branch": "Mission Road", "totalFee": null, "paidFee": 4000.0 }, { "id": "S063", "name": "Pansheriya krisha jitendrabhai", "branch": "Velanja", "totalFee": null, "paidFee": null }, { "id": "S064", "name": "Vaghela hemanshi kirtibhai", "branch": "Velanja", "totalFee": null, "paidFee": null }, { "id": "S065", "name": "Mavani harmin satishbhai", "branch": "Velanja", "totalFee": null, "paidFee": 3000.0 }, { "id": "S066", "name": "Gohil sagar rakeshbhai", "branch": "Velanja", "totalFee": null, "paidFee": null }, { "id": "S067", "name": "Vekariya jenee kalpeshbhai", "branch": "Velanja", "totalFee": null, "paidFee": null }, { "id": "S068", "name": "Thesiya sarthak shrikantbhai", "branch": "Velanja", "totalFee": null, "paidFee": 5000.0 }, { "id": "S069", "name": "Dhaduk taksh alpeshbhai", "branch": "Velanja", "totalFee": null, "paidFee": 5000.0 }, { "id": "S070", "name": "Ghediya mahi nitinbhai", "branch": "Velanja", "totalFee": null, "paidFee": null }, { "id": "S071", "name": "Kanani daksh bhaveshbhai", "branch": "Velanja", "totalFee": null, "paidFee": 6000.0 }, { "id": "S072", "name": "Lathiya Bhavya Hareshbhai", "branch": "Velanja", "totalFee": null, "paidFee": 6000.0 }, { "id": "S073", "name": "Galani rushabh sunilbhai", "branch": "Velanja", "totalFee": null, "paidFee": null }, { "id": "S074", "name": "Gohil nehal bharat bhai", "branch": "Velanja", "totalFee": null, "paidFee": 6000.0 }, { "id": "S075", "name": "Savaliya Niks vasantbhai", "branch": "Velanja", "totalFee": null, "paidFee": 6000.0 }, { "id": "S076", "name": "Bhuva Tirth Sureshbhai", "branch": "Velanja", "totalFee": null, "paidFee": null }, { "id": "S077", "name": "Vadadoriya bansi jigneshbhai", "branch": "Velanja", "totalFee": null, "paidFee": null }, { "id": "S078", "name": "Mavani jeni bhaveshbhai", "branch": "Velanja", "totalFee": null, "paidFee": null }, { "id": "S079", "name": "Kevadiya varmi alpeshbhai", "branch": "Velanja", "totalFee": null, "paidFee": null }, { "id": "S080", "name": "Goyani panth babubhai", "branch": "Velanja", "totalFee": null, "paidFee": null }, { "id": "S081", "name": "Radadiya dravya rajeshbhai", "branch": "Velanja", "totalFee": null, "paidFee": 5000.0 }, { "id": "S082", "name": "Kyada rushabh kishorbhai", "branch": "Velanja", "totalFee": null, "paidFee": 6000.0 }, { "id": "S083", "name": "Mulani Vansh Hareshbhai", "branch": "Velanja", "totalFee": null, "paidFee": null }, { "id": "S084", "name": "Ukani Smit Mukeshbhai", "branch": "Velanja", "totalFee": null, "paidFee": 6000.0 }, { "id": "S085", "name": "Kakani chand ankurbhai", "branch": "Velanja", "totalFee": null, "paidFee": null }, { "id": "S086", "name": "Barvaliya disha rajeshbhai", "branch": "Velanja", "totalFee": null, "paidFee": null }, { "id": "S087", "name": "Vekariya aayush anilbbai", "branch": "Velanja", "totalFee": null, "paidFee": null }, { "id": "S088", "name": "Jodhani jash pareshbhai", "branch": "Velanja", "totalFee": null, "paidFee": 6000.0 }, { "id": "S089", "name": "Thesiya shaurya kamleshbhai", "branch": "Velanja", "totalFee": null, "paidFee": null }, { "id": "S090", "name": "Ribadiya khushi rameshbhai", "branch": "Velanja", "totalFee": null, "paidFee": 6000.0 }, { "id": "S091", "name": "Kachhadiya yug ramjibhai", "branch": "Velanja", "totalFee": null, "paidFee": 3000.0 }, { "id": "S092", "name": "Lakkad sujal jagdishbhai", "branch": "Velanja", "totalFee": null, "paidFee": 6000.0 }, { "id": "S093", "name": "Koladiya shubham mukeshbhai", "branch": "Velanja", "totalFee": null, "paidFee": null }, { "id": "S094", "name": "Gojariya om mukeshbhai", "branch": "Velanja", "totalFee": null, "paidFee": null }, { "id": "S095", "name": "Pethani dharmik mehulbhai", "branch": "Velanja", "totalFee": null, "paidFee": 7000.0 }, { "id": "S096", "name": "Dholiya parth dineshbhai", "branch": "Velanja", "totalFee": null, "paidFee": null }, { "id": "S097", "name": "Smit mukeshbhai ukani", "branch": "Mission Road", "totalFee": null, "paidFee": 2500.0 }, { "id": "S098", "name": "Hepin girishbhai butani", "branch": "Mota Varachha", "totalFee": null, "paidFee": null }, { "id": "S099", "name": "JIYA HIMMAT BHAI GHEVARIYA", "branch": "Velanja", "totalFee": null, "paidFee": 6000.0 }], "history": [{ "date": "2026-04-14", "velanja": 10000.0, "mota": null, "mission": null }, { "date": "2026-05-12", "velanja": 10000.0, "mota": null, "mission": null }, { "date": "2026-05-27", "velanja": 10000.0, "mota": null, "mission": null }, { "date": "2026-06-22", "velanja": 10000.0, "mota": null, "mission": null }, { "date": "2026-07-20", "velanja": 10000.0, "mota": null, "mission": null }, { "date": "2026-08-08", "velanja": 5000.0, "mota": 5000.0, "mission": null }, { "date": "2026-08-19", "velanja": null, "mota": null, "mission": 6000.0 }] };
+    let state = JSON.parse(JSON.stringify(INITIAL));
+    let dbReady = false;
+    let saveTimer = null;
+    let liveSyncTimer = null;
+    let isSaving = false;
+    let liveSyncInFlight = false;
+    let lastServerState = "";
+
+    async function loadState() {
+      try {
+        const headers = { "Cache-Control": "no-cache, no-store" }; if (BRANCH_TOKEN) headers.Authorization = 'Bearer ' + BRANCH_TOKEN; else headers['X-Main-Admin']='true';
+        const res = await fetch("/api/state?ts=" + Date.now(), { cache: "no-store", headers });
+        if (!res.ok) throw new Error("API unavailable");
+        const data = await res.json();
+        state = { students: Array.isArray(data.students) ? data.students : [], history: Array.isArray(data.history) ? data.history : [] };
+        if(data.access) ACCESS=data.access; applyAccessUI();
+        lastServerState = JSON.stringify(state);
+        dbReady = true;
+        document.getElementById("lastSaved").textContent = "Connected";
+        renderAll();
+      } catch (e) {
+        dbReady = false;
+        document.getElementById("lastSaved").textContent = "Not connected";
+        renderAll();
+        toast("Database connection failed — existing screen data was kept");
+        console.error(e);
+      }
+    }
+
+    async function saveState(actionKey = "pageOpen") {
+      renderAll();
+      clearTimeout(saveTimer);
+      saveTimer = null;
+      isSaving = true;
+      try {
+        const headers = Object.assign({ "Content-Type": "application/json", "X-Admin-Action": actionKey }, BRANCH_TOKEN
+          ? {Authorization:'Bearer '+BRANCH_TOKEN}
+          : {"X-Admin-Password":ADMIN_PASSWORDS[actionKey] || ADMIN_PASSWORDS.pageOpen || "", "X-Main-Admin":"true"});
+        const res = await fetch("/api/state", {method:"PUT",headers,body:JSON.stringify(state),cache:"no-store"});
+        const text=await res.text();
+        let data={}; try{data=JSON.parse(text);}catch(e){}
+        if(!res.ok) throw new Error(data.error||text||"Save failed");
+        state={students:Array.isArray(data.students)?data.students:state.students,history:Array.isArray(data.history)?data.history:state.history};
+        lastServerState=JSON.stringify(state); dbReady=true;
+        document.getElementById("lastSaved").textContent="Connected"; renderAll();
+        return data;
+      } catch(e) {
+        dbReady=false; document.getElementById("lastSaved").textContent="Not connected";
+        toast(e.message||"MongoDB save failed"); console.error(e); throw e;
+      } finally { isSaving=false; }
+    }
+
+    async function liveSync() {
+      if (isSaving || saveTimer || liveSyncInFlight) return;
+      liveSyncInFlight = true;
+      try {
+        const res = await fetch("/api/state?live=" + Date.now(), {
+          method: "GET",
+          cache: "no-store",
+          headers: Object.assign({ "Cache-Control": "no-cache, no-store", "Pragma": "no-cache" }, BRANCH_TOKEN ? {Authorization:'Bearer '+BRANCH_TOKEN} : {'X-Main-Admin':'true'})
+        });
+        if (!res.ok) throw new Error("HTTP " + res.status);
+        const data = await res.json();
+        const incoming = {
+          students: Array.isArray(data.students) ? data.students : [],
+          history: Array.isArray(data.history) ? data.history : []
+        };
+        const incomingJson = JSON.stringify(incoming);
+        if (incomingJson !== lastServerState) {
+          state = incoming;
+          lastServerState = incomingJson;
+          dbReady = true;
+          document.getElementById("lastSaved").textContent = "Connected";
+          renderAll();
+        }
+      } catch (e) {
+        console.warn("Live sync failed:", e);
+      } finally {
+        liveSyncInFlight = false;
+      }
+    }
+
+    function startLiveSync() {
+      clearInterval(liveSyncTimer);
+      liveSync();
+      liveSyncTimer = setInterval(liveSync, 1000);
+    }
+
+    document.addEventListener("visibilitychange", () => { if (document.visibilityState === "visible") liveSync(); });
+    window.addEventListener("online", liveSync);
+    function money(v) { return "₹" + Number(v || 0).toLocaleString("en-IN", { maximumFractionDigits: 2 }); }
+    function num(v) { if (v === "" || v == null || isNaN(Number(v))) return null; return Number(v); }
+    function calc(s) { const total = Number(s.totalFee || 0), paid = Number(s.paidFee || 0); return { total, paid, p25: s.paidFee == null ? 0 : paid * .25, remaining: total - paid }; }
+    function status(s) { const c = calc(s); if (c.total <= 0 && c.paid <= 0) return ["No Fee", "partial"]; if (c.remaining <= 0) return ["Paid", "paid"]; if (c.paid > 0) return ["Partial", "partial"]; return ["Due", "due"]; }
+    function branchName(b) { const x=(window._branches||[]).find(x=>String(x._id)===String(b)); return x?.name || String(b||'').trim() || 'Unassigned'; }
+    function branchClass(b) { const n=branchName(b); return 'branch-' + n.toLowerCase().replace(/[^a-z0-9]+/g,'-'); }
+    function branchIdForName(name){ return (window._branches||[]).find(b=>b.name===name)?._id || null; }
+    function branchList(){ return (window._branches||[]).filter(b=>b.active!==false); }
+    function allBranches(){ return window._branches||[]; }
+    function renderAll() { renderDashboard(); renderStudents(); renderHistory(); renderExcelInfo(); }
+    function renderDashboard() {
+      const ss=state.students,total=ss.reduce((a,s)=>a+calc(s).total,0),paid=ss.reduce((a,s)=>a+calc(s).paid,0),p25=ss.reduce((a,s)=>a+calc(s).p25,0);
+      document.getElementById('dStudents').textContent=ss.length;document.getElementById('dTotal').textContent=money(total);document.getElementById('dPaid').textContent=money(paid);document.getElementById('d25').textContent=money(p25);document.getElementById('dRemain').textContent=money(total-paid);
+      const branches=BRANCH_TOKEN?[{name:ACCESS.branch,id:ACCESS.branchId}]:allBranches();
+      document.getElementById('branchCards').innerHTML=branches.map(b=>{const a=ss.filter(x=>String(x.branchId||'')===String(b.id||b._id)||branchName(x.branch)===b.name);const t=a.reduce((x,s)=>x+calc(s).total,0),pd=a.reduce((x,s)=>x+calc(s).paid,0),p=a.reduce((x,s)=>x+calc(s).p25,0),rem=a.reduce((x,s)=>x+calc(s).remaining,0);const collection=state.history.filter(h=>String(h.branchId||'')===String(b.id||b._id)||h.branch===b.name).reduce((x,h)=>x+(+h.amount||0),0);return `<div style="padding:14px 0;border-bottom:1px solid var(--line)"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px"><b>${esc(b.name)}</b><span class="badge">${a.length} Students</span></div><div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px"><div><span class="muted">Total Fee</span><br><b>${money(t)}</b></div><div><span class="muted">આવેલી Fee</span><br><b>${money(pd)}</b></div><div><span class="muted">આવેલી Fee 25%</span><br><b>${money(p)}</b></div></div><div style="display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin-top:10px;padding-top:10px;border-top:1px dashed var(--line)"><div><span class="muted">Collection Total</span><br><b>${money(collection)}</b></div><div><span class="muted">બાકી લેવાની</span><br><b>${money(Math.max(0,p-collection))}</b></div></div></div>`;}).join('') + (!branches.length?'<div class="empty">No branches found.</div>':'');
+      const h=[...state.history].sort((a,b)=>String(b.date).localeCompare(String(a.date)));document.getElementById('recentHistory').innerHTML=h.length?h.map(x=>`<div style="padding:8px 0;border-bottom:1px solid var(--line)"><b>${esc(x.date)}</b> <span class="muted">• ${esc(x.branch||'')} • ${money(x.amount||0)}</span></div>`).join(''):'<div class="empty">No collection history</div>';
+    }
+    function renderStudents() {
+      const q=(document.getElementById("search")?.value||"").toLowerCase().trim(),bf=document.getElementById("branchFilter")?.value||"";
+      const arr=state.students.filter(s=>(!q||String(s.name||'').toLowerCase().includes(q)||String(s.id||'').toLowerCase().includes(q)||String(s.mobile||'').toLowerCase().includes(q))&&(!bf||String(s.branchId||'')===bf||branchName(s.branch)===bf));
+      document.getElementById("studentBody").innerHTML = arr.length ? arr.map(s => {
+        const c = calc(s), st = status(s);
+        return `<tr><td>${s.id}</td><td>${esc(s.name)}</td><td>${esc(s.mobile || "")}</td><td><span class="branch-badge ${branchClass(s.branch)}">${branchName(s.branch)}</span></td><td class="num">${money(c.total)}</td><td class="num">${money(c.paid)}</td><td class="num">${money(c.p25)}</td><td class="num">${money(c.remaining)}</td><td><span class="badge ${st[1]}">${st[0]}</span></td><td><button class="secondary" onclick="editStudent('${s.id}')">Edit</button> <button class="danger" onclick="deleteStudent('${s.id}')">Delete</button></td></tr>`;
+      }).join("") : `<tr><td colspan="10" class="empty">No students match the filter.</td></tr>`;
+    }
+    function renderHistory(){const wrap=document.getElementById("historyTableWrap");wrap.querySelector("thead").innerHTML="<tr><th>Date</th><th>Branch</th><th>Collection</th><th>Action</th></tr>";document.getElementById("historyBody").innerHTML=state.history.length?state.history.map((x,i)=>`<tr><td>${esc(x.date)}</td><td>${esc(x.branch||branchName(x.branchId)||"")}</td><td>${money(x.amount||0)}</td><td><button class="secondary" onclick="editHistory(${i})">Edit</button> <button class="danger" onclick="deleteHistory(${i})">Delete</button></td></tr>`).join(""):'<tr><td colspan="4" class="empty">No collection history.</td></tr>';}
+    function renderExcelInfo() { document.getElementById("excelInfo").innerHTML = `<b>${state.students.length}</b> students &nbsp; • &nbsp; <b>${state.history.length}</b> collection entries &nbsp; • &nbsp; Database: <b>${dbReady ? "Connected" : "Not connected"}</b>`; }
+    function esc(s) { return String(s ?? "").replace(/[&<>"']/g, m => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", "\"": "&quot;", "'": "&#039;" }[m])); }
+
+    async function openPasswordSettings() {
+      const master = await securePasswordPrompt('🔐 Password Change', 'Master password required to manage all action passwords.');
+      if (master === null) return;
+      try {
+        const res = await fetch('/api/auth', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'master', masterPassword: master }) });
+        const data = await res.json();
+        if (!res.ok || !data.ok) { alert('Wrong master password.'); return; }
+        const body = document.getElementById('passwordSettingsBody');
+        body.innerHTML = Object.entries(PASSWORD_KEYS).map(([key, label]) => `
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;align-items:center;padding:10px 0;border-bottom:1px solid var(--line)">
+        <div><b>${label}</b><div class="hint">${key}</div></div>
+        <div class="secure-password-wrap">
+          <input id="pw_${key}" class="secure-password-input" type="password" autocomplete="new-password" name="new-password" autocapitalize="off" spellcheck="false" placeholder="New password (leave blank to keep)">
+          <span class="secure-password-mask" aria-hidden="true"><span class="mask-dots"></span><span class="mask-caret"></span></span>
+          <button class="secure-password-eye" type="button" aria-label="Show password" onclick="toggleSecureInput('pw_${key}',this)">👁</button>
+        </div>
+      </div>`).join('');
+        document.querySelectorAll('#passwordSettingsBody .secure-password-input').forEach(initSecureInput);
+        document.getElementById('passwordSettingsModal').style.display = 'block';
+        window._passwordMaster = master;
+      } catch (e) { alert('Server connection failed.'); }
+    }
+    function closePasswordSettings() { document.getElementById('passwordSettingsModal').style.display = 'none'; window._passwordMaster = null; }
+    async function savePasswordSettings() {
+      if (!window._passwordMaster) return;
+      const passwords = {};
+      for (const key of Object.keys(PASSWORD_KEYS)) { const v = getSecureValue(document.getElementById('pw_' + key)) || ''; if (v) passwords[key] = v; }
+      if (!Object.keys(passwords).length) { alert('At least one new password enter કરો.'); return; }
+      for (const [key, v] of Object.entries(passwords)) { if (v.length < 4) { alert(PASSWORD_KEYS[key] + ' password minimum 4 characters હોવો જોઈએ.'); return; } }
+      try {
+        const res = await fetch('/api/auth', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'changeSettings', masterPassword: window._passwordMaster, passwords }) });
+        const data = await res.json();
+        if (!res.ok || !data.ok) throw new Error(data.error || 'Password update failed.');
+        Object.assign(ADMIN_PASSWORDS, passwords);
+        Object.keys(PASSWORD_KEYS).forEach(key => { const el = document.getElementById('pw_' + key); if (el) el.value = ''; });
+        alert('✅ Passwords updated successfully.'); closePasswordSettings();
+      } catch (e) { alert('❌ ' + e.message); }
+    }
+    async function verifyAdminAction(actionKey) {
+      if(BRANCH_TOKEN){ if(ACCESS.permissions && ACCESS.permissions[actionKey]===false){toast('This action is not allowed for your branch.');return false;} return true; }
+      const label = PASSWORD_KEYS[actionKey] || actionKey;
+      const p = await securePasswordPrompt('🔐 ' + label + ' Password', 'Enter the password for ' + label + '.');
+      if (p === null) return false;
+      try {
+        if (!(await verifyPassword(actionKey, p))) { toast('Wrong password.'); return false; }
+        ADMIN_PASSWORDS[actionKey] = p; return true;
+      } catch (e) { alert('Server connection failed.'); return false; }
+    }
+    async function verifyFilePassword(actionKey) { return verifyAdminAction(actionKey); }
+    async function addStudent(){if(!(await verifyAdminAction('studentAdd')))return;if(!BRANCH_TOKEN&&!(window._branches||[]).length)await loadBranches();openStudentForm(null);}
+    async function openStudentForm(id){
+      const s=id?state.students.find(x=>x.id===id):{id:'',name:'',mobile:'',branchId:'',branch:'',totalFee:null,paidFee:null};
+      window._editingStudentId=id||null;
+      document.getElementById('studentFormTitle').textContent=id?'✏️ Edit Student':'👨‍🎓 Add Student';
+      document.getElementById('sfName').value=s.name||'';
+      document.getElementById('sfMobile').value=s.mobile||'';
+      document.getElementById('sfTotal').value=s.totalFee??'';
+      document.getElementById('sfPaid').value=s.paidFee??'';
+      const sel=document.getElementById('sfBranch');
+      let bs=BRANCH_TOKEN
+        ? (ACCESS.branchId && ACCESS.branch ? [{_id:ACCESS.branchId,name:ACCESS.branch}] : [])
+        : branchList();
+      // Main-admin branch data can be loaded asynchronously. If the list is not
+      // available yet, show the branches already present in the loaded students.
+      if(!BRANCH_TOKEN && !bs.length){
+        const seen=new Map();
+        state.students.forEach(x=>{if(x.branchId&&x.branch&&!seen.has(String(x.branchId)))seen.set(String(x.branchId),{_id:x.branchId,name:x.branch});});
+        bs=[...seen.values()];
+      }
+      sel.innerHTML=bs.length
+        ? bs.map(b=>`<option value="${esc(b._id)}">${esc(b.name)}</option>`).join('')
+        : '<option value="">No active branch available</option>';
+      sel.value=s.branchId||branchIdForName(s.branch)||(BRANCH_TOKEN?ACCESS.branchId:'');
+      if(BRANCH_TOKEN) sel.disabled=true; else sel.disabled=false;
+      document.getElementById('studentFormError').style.display='none';
+      document.getElementById('studentFormModal').style.display='block';
+    }
+    function closeStudentForm(){document.getElementById('studentFormModal').style.display='none';window._editingStudentId=null;}
+    async function saveStudentForm(){
+      const err=document.getElementById('studentFormError');
+      const name=document.getElementById('sfName').value.trim();
+      const bid=BRANCH_TOKEN?String(ACCESS.branchId||''):String(document.getElementById('sfBranch').value||'');
+      if(!name||!bid){err.textContent='Student name and branch are required.';err.style.display='block';return;}
+      const selected=(window._branches||[]).find(b=>String(b._id)===String(bid));
+      const branch=selected?.name||ACCESS.branch||branchName(bid);
+      if(!branch){err.textContent='Valid branch select કરો. Main Adminમાં Branches tab પરથી branch બનાવો.';err.style.display='block';return;}
+      const id=window._editingStudentId;
+      let student=id?state.students.find(x=>x.id===id):null;
+      if(!student){
+        const used=new Set(state.students.map(x=>String(x.id||'')));
+        let n=state.students.length+1, newId='S'+String(n).padStart(3,'0');
+        while(used.has(newId)){n++;newId='S'+String(n).padStart(3,'0');}
+        // Branch accounts only receive their own state, so make newly-created IDs
+        // globally collision-resistant instead of accidentally reusing S001, S002, etc.
+        if(BRANCH_TOKEN){ newId='S'+Date.now().toString().slice(-10); while(used.has(newId)) newId='S'+Date.now().toString().slice(-10)+Math.floor(Math.random()*10); }
+        student={id:newId}; state.students.push(student);
+      }
+      Object.assign(student,{name,mobile:document.getElementById('sfMobile').value.trim(),branch,branchId:bid,totalFee:num(document.getElementById('sfTotal').value),paidFee:num(document.getElementById('sfPaid').value)});
+      try{await saveState(id?'studentEdit':'studentAdd');closeStudentForm();toast('Student saved');}
+      catch(e){err.textContent=e.message||'Student save failed';err.style.display='block';}
+    }
+    async function editStudent(id,alreadyVerified=false){if(!alreadyVerified&&!(await verifyAdminAction('studentEdit')))return;openStudentForm(id);}
+    async function deleteStudent(id) {
+      if (!(await verifyAdminAction("studentDelete"))) return;
+      if (await askConfirm('Delete Student','This student will be permanently removed.')) { state.students=state.students.filter(s=>s.id!==id); await saveState('studentDelete'); toast('Student deleted'); }
+    }
+    async function addHistory(){if(!(await verifyAdminAction("collectionAdd")))return;await editHistory(null,true);}
+    async function editHistory(i,alreadyVerified=false){
+      if(!alreadyVerified&&!(await verifyAdminAction("collectionEdit")))return;
+      const x=i===null?{date:new Date().toISOString().slice(0,10),branchId:BRANCH_TOKEN?ACCESS.branchId:"",amount:null}:state.history[i];
+      const date=prompt("Date (YYYY-MM-DD):",x.date||""); if(date===null)return;
+      let bid=x.branchId||"";
+      if(BRANCH_TOKEN){bid=String(ACCESS.branchId||'');}
+      else{
+        const bs=branchList();
+        if(!bs.length){toast('No active branches. Create a branch first.');return;}
+        const names=bs.map(b=>`${b._id} | ${b.name}`).join("\n");
+        const picked=prompt("Branch select કરો (ID paste કરો):\n"+names,bid);
+        if(picked===null)return;
+        bid=picked.includes("|")?picked.split("|")[0].trim():picked.trim();
+      }
+      const b=BRANCH_TOKEN
+        ? { _id:ACCESS.branchId, name:ACCESS.branch }
+        : (window._branches||[]).find(z=>String(z._id)===String(bid));
+      if(!b?.name||!bid){toast("Valid branch select કરો.");return;}
+      const amount=prompt("Collection Amount:",x.amount??"");if(amount===null)return;
+      const obj={date,branch:b.name,branchId:bid,amount:num(amount),velanja:null,mota:null,mission:null};
+      if(i===null)state.history.push(obj);else state.history[i]=obj;
+      try{await saveState(i===null?"collectionAdd":"collectionEdit");toast("Collection saved");}
+      catch(e){toast(e.message||'Collection save failed');}
+    }
+    async function deleteHistory(i) {
+      if (!(await verifyAdminAction("collectionDelete"))) return;
+      if (await askConfirm('Delete Collection','This collection entry will be permanently removed.')) { state.history.splice(i,1); await saveState('collectionDelete'); toast('Collection deleted'); }
+    }
+
+    async function exportXlsx() {
+      if (!(await verifyFilePassword("excelExport"))) return;
+      if (typeof XLSX === "undefined") {
+        alert("Excel library could not load. Please open this page with internet access and try again.");
+        return;
+      }
+
+      const wb = XLSX.utils.book_new();
+      const rows = [];
+
+      // One single editable master sheet.
+      rows.push(["STUDENT FEE MANAGEMENT - ALL DATA"]);
+      rows.push(["Edit the yellow/white data cells, save this same .xlsx, then use Import Excel in the website."]);
+      rows.push([]);
+      rows.push(["STUDENT DATA"]);
+      rows.push(["Student ID", "Student Name", "Mobile Number", "Branch", "Total Fee", "Paid Fee", "Paid Fee 25%", "Remaining", "Status"]);
+
+      state.students.forEach((s, i) => {
+        const r = 6 + i;
+        const c = calc(s);
+        rows.push([
+          s.id || "",
+          s.name,
+          s.mobile || "",
+          s.branch || "",
+          s.totalFee == null ? "" : s.totalFee,
+          s.paidFee == null ? "" : s.paidFee,
+          { f: `=IF(F${r}="","",F${r}*25%)` },
+          { f: `=IF(E${r}="","",E${r}-IF(F${r}="",0,F${r}))` },
+          { f: `=IF(E${r}="","",IF(H${r}<=0,"Paid",IF(F${r}>0,"Partial","Due")))` }
+        ]);
+      });
+
+      const historyStart = 8 + state.students.length;
+      rows.push([]);
+      rows.push(["COLLECTION HISTORY"]);
+      rows.push(["Date", "Velanja", "Mota Varachha", "Mission Road", "Total Collection"]);
+
+      state.history.forEach((x, i) => {
+        const r = historyStart + i;
+        rows.push([
+          x.date || "",
+          x.velanja ?? "",
+          x.mota ?? "",
+          x.mission ?? "",
+          { f: `=SUM(B${r}:D${r})` }
+        ]);
+      });
+
+      const summaryStart = historyStart + state.history.length + 3;
+      rows.push([]);
+      rows.push(["SUMMARY"]);
+      rows.push(["Metric", "Value"]);
+      rows.push(["Total Students", { f: `=COUNTA(A6:A${5 + state.students.length})` }]);
+      rows.push(["Total Fee", { f: `=SUM(C6:C${5 + state.students.length})` }]);
+      rows.push(["Total Paid Fee", { f: `=SUM(D6:D${5 + state.students.length})` }]);
+      rows.push(["Total Paid Fee 25%", { f: `=SUM(E6:E${5 + state.students.length})` }]);
+      rows.push(["Total Remaining", { f: `=SUM(F6:F${5 + state.students.length})` }]);
+      rows.push(["Total Collection History", { f: `=IFERROR(SUM(E${historyStart}:E${historyStart + Math.max(state.history.length - 1, 0)}),0)` }]);
+      rows.push(["Velanja Students", { f: `=COUNTIF(B6:B${5 + state.students.length},"Velanja")` }]);
+      rows.push(["Mota Varachha Students", { f: `=COUNTIF(B6:B${5 + state.students.length},"Mota Varachha")` }]);
+      rows.push(["Mission Road Students", { f: `=COUNTIF(B6:B${5 + state.students.length},"Mission Road")` }]);
+
+      const ws = XLSX.utils.aoa_to_sheet(rows);
+
+      ws["!cols"] = [
+        { wch: 34 }, { wch: 20 }, { wch: 14 }, { wch: 14 }, { wch: 18 }, { wch: 15 }, { wch: 14 }
+      ];
+
+      // Freeze the student header and add autofilter to the student data.
+      ws["!freeze"] = { xSplit: 0, ySplit: 5 };
+      ws["!autofilter"] = { ref: `A5:G${5 + state.students.length}` };
+
+      // Make the exported workbook visually clear.
+      const title = { font: { bold: true, size: 16 } };
+      const section = { font: { bold: true, size: 13 } };
+      const header = { font: { bold: true, color: { rgb: "FFFFFF" } }, fill: { fgColor: { rgb: "1F4E78" }, patternType: "solid" } };
+
+      if (ws["A1"]) ws["A1"].s = title;
+      if (ws["A4"]) ws["A4"].s = section;
+      ["A5", "B5", "C5", "D5", "E5", "F5", "G5"].forEach(a => { if (ws[a]) ws[a].s = header; });
+
+      const histHeaderRow = historyStart - 1;
+      if (ws[`A${histHeaderRow}`]) ws[`A${histHeaderRow}`].s = section;
+      ["A" + historyStart, "B" + historyStart, "C" + historyStart, "D" + historyStart, "E" + historyStart].forEach(a => { if (ws[a]) ws[a].s = header; });
+
+      const sumHeaderRow = summaryStart + 1;
+      if (ws[`A${summaryStart}`]) ws[`A${summaryStart}`].s = section;
+      if (ws[`A${sumHeaderRow}`]) ws[`A${sumHeaderRow}`].s = header;
+      if (ws[`B${sumHeaderRow}`]) ws[`B${sumHeaderRow}`].s = header;
+
+      // Highlight editable input columns.
+      for (let r = 6; r <= 5 + state.students.length; r++) {
+        ["A", "B", "C", "D", "E", "F"].forEach(col => {
+          if (ws[`${col}${r}`]) ws[`${col}${r}`].s = { fill: { fgColor: { rgb: "FFF8D7" }, patternType: "solid" } };
+        });
+      }
+      for (let r = historyStart + 1; r <= historyStart + state.history.length; r++) {
+        ["A", "B", "C", "D"].forEach(col => {
+          if (ws[`${col}${r}`]) ws[`${col}${r}`].s = { fill: { fgColor: { rgb: "FFF8D7" }, patternType: "solid" } };
+        });
+      }
+
+      XLSX.utils.book_append_sheet(wb, ws, "All Data");
+      wb.Workbook = wb.Workbook || {};
+      wb.Workbook.CalcPr = { fullCalcOnLoad: true, forceFullCalc: true, calcMode: "auto" };
+
+      XLSX.writeFile(wb, "student_fee_management_ALL_DATA.xlsx", { bookType: "xlsx" });
+      toast("All data exported to one editable Excel");
+    }
+    async function importXlsxFile(file) {
+      if (!(await verifyFilePassword("excelImport"))) return;
+      if (typeof XLSX === "undefined") {
+        alert("Excel library load નથી થયું. Internet ચાલુ રાખીને page refresh કરો અને ફરી Import કરો.");
+        return;
+      }
+      if (!file || !/\.(xlsx|xls)$/i.test(file.name)) {
+        alert("કૃપા કરીને .xlsx અથવા .xls Excel file પસંદ કરો.");
+        return;
+      }
+
+      const reader = new FileReader();
+      reader.onload = async e => {
+        try {
+          const wb = XLSX.read(e.target.result, { type: "array", cellDates: true, cellFormula: true });
+
+          let out = [];
+          let hist = [];
+
+          // Preferred format: one editable "All Data" sheet.
+          const master = wb.Sheets["All Data"];
+          if (master) {
+            const a = XLSX.utils.sheet_to_json(master, { header: 1, defval: "", raw: false });
+
+            // Locate STUDENT DATA header.
+            let studentHeader = -1;
+            for (let i = 0; i < a.length; i++) {
+              if (String(a[i][0] || "").trim().toUpperCase().replace(/\s+/g, " ") === "STUDENT NAME" &&
+                String(a[i][1] || "").trim().toUpperCase().replace(/\s+/g, " ") === "BRANCH") {
+                studentHeader = i;
+                break;
+              }
+            }
+            if (studentHeader < 0) throw new Error("Student data header not found in All Data sheet.");
+
+            const h = a[studentHeader].map(x => String(x).trim().toLowerCase());
+            const nameIdx = h.indexOf("student name");
+            const idIdx = h.indexOf("student id");
+            const mobileIdx = h.indexOf("mobile number");
+            const branchIdx = h.indexOf("branch");
+            const totalIdx = h.indexOf("total fee");
+            const paidIdx = h.indexOf("paid fee");
+
+            let historyHeader = -1;
+            for (let i = studentHeader + 1; i < a.length; i++) {
+              if (String(a[i][0]).trim().toUpperCase() === "DATE" &&
+                String(a[i][1]).trim().toUpperCase() === "VELANJA") {
+                historyHeader = i;
+                break;
+              }
+            }
+
+            const studentEnd = historyHeader > 0 ? historyHeader : a.length;
+            for (let i = studentHeader + 1; i < studentEnd; i++) {
+              const row = a[i];
+              const name = String(row[nameIdx] ?? "").trim();
+              if (!name || name.toUpperCase() === "COLLECTION HISTORY" || name.toUpperCase() === "STUDENT DATA" || name.toUpperCase() === "SUMMARY") continue;
+              out.push({
+                id: String(row[idIdx] ?? "").trim() || ("S" + String(out.length + 1).padStart(3, "0")),
+                name,
+                mobile: String(row[mobileIdx] ?? "").trim(),
+                branch: String(row[branchIdx] ?? "").trim(),
+                totalFee: num(row[totalIdx]),
+                paidFee: num(row[paidIdx])
+              });
+            }
+
+            if (historyHeader >= 0) {
+              const hh = a[historyHeader].map(x => String(x).trim().toLowerCase());
+              const di = hh.indexOf("date"), vi = hh.indexOf("velanja"), mi = hh.indexOf("mota varachha"), mii = hh.indexOf("mission road");
+              for (let i = historyHeader + 1; i < a.length; i++) {
+                const row = a[i];
+                const rawDate = row[di];
+                if (rawDate === undefined || rawDate === "") continue;
+                const date = formatExcelDate(rawDate);
+                if (!date) continue;
+                hist.push({
+                  date,
+                  velanja: num(row[vi]),
+                  mota: num(row[mi]),
+                  mission: num(row[mii])
+                });
+              }
+            }
+          } else {
+            // Compatibility with previous generated workbook.
+            const ws = wb.Sheets["Students"] || wb.Sheets["Student Fee"];
+            if (!ws) throw new Error("All Data / Students / Student Fee sheet not found.");
+
+            const a = XLSX.utils.sheet_to_json(ws, { header: 1, defval: "" });
+            const header = (a[0] || []).map(x => String(x).trim().toLowerCase());
+            const isNew = header.includes("student id") && header.includes("student name");
+            const nameIdx = header.indexOf("student name");
+            const mobileIdx = header.indexOf("mobile number");
+            const branchIdx = header.indexOf("branch");
+            const totalIdx = isNew ? header.indexOf("total fee") : 1;
+            const paidIdx = isNew ? header.indexOf("paid fee") : 2;
+            const idIdx = -1;
+
+            if (nameIdx < 0) throw new Error("Student Name column not found.");
+
+            for (let i = 1; i < a.length; i++) {
+              const row = a[i], name = String(row[nameIdx] ?? "").trim();
+              if (!name) continue;
+              out.push({
+                id: "S" + String(out.length + 1).padStart(3, "0"),
+                name,
+                mobile: mobileIdx >= 0 ? String(row[mobileIdx] || "").trim() : "",
+                branch: branchIdx >= 0 ? String(row[branchIdx] || "").trim() : "",
+                totalFee: num(row[totalIdx]),
+                paidFee: num(row[paidIdx])
+              });
+            }
+
+            const hw = wb.Sheets["Collection History"] || wb.Sheets["Summary"];
+            if (hw) {
+              const h = XLSX.utils.sheet_to_json(hw, { header: 1, defval: "", raw: false });
+              if (wb.Sheets["Collection History"]) {
+                const hh = (h[0] || []).map(x => String(x).trim().toLowerCase());
+                const di = hh.indexOf("date"), vi = hh.indexOf("velanja"), mi = hh.indexOf("mota varachha"), mii = hh.indexOf("mission road");
+                for (let i = 1; i < h.length; i++) {
+                  if (!h[i][di]) continue;
+                  hist.push({ date: formatExcelDate(h[i][di]), velanja: num(h[i][vi]), mota: num(h[i][mi]), mission: num(h[i][mii]) });
+                }
+              } else {
+                for (let i = 8; i < h.length; i++) {
+                  if (!h[i][1]) continue;
+                  hist.push({ date: formatExcelDate(h[i][1]), velanja: num(h[i][2]), mota: num(h[i][3]), mission: num(h[i][4]) });
+                }
+              }
+            }
+          }
+
+          if (!out.length) throw new Error("No student data found in the Excel file.");
+
+          // Clean IDs and ensure uniqueness.
+          const used = new Set();
+          out = out.map((s, i) => {
+            let id = s.id || ("S" + String(i + 1).padStart(3, "0"));
+            if (used.has(id)) id = "S" + String(i + 1).padStart(3, "0");
+            used.add(id);
+            return { ...s, id };
+          });
+
+          // Convert the exported three-column branch history into the same
+          // branch-specific records used by the live database.
+          if (hist.length) {
+            const branchByName = new Map((window._branches||[]).map(b=>[String(b.name).trim().toLowerCase(),b]));
+            const converted=[];
+            for(const h of hist){
+              for(const [name,val] of [['Velanja',h.velanja],['Mota Varachha',h.mota],['Mission Road',h.mission]]){
+                const n=Number(val||0); if(!n) continue;
+                const b=branchByName.get(name.toLowerCase());
+                if(b) converted.push({date:h.date,branch:b.name,branchId:b._id,amount:n,velanja:null,mota:null,mission:null});
+              }
+            }
+            if(BRANCH_TOKEN) state.history=converted.filter(h=>String(h.branchId)===String(ACCESS.branchId));
+            else state.history=converted;
+          }
+          state.students = out.map(s=>{
+            const b=(window._branches||[]).find(x=>String(x.name).trim().toLowerCase()===String(s.branch||'').trim().toLowerCase());
+            return {...s,branchId:b?._id||s.branchId||null,branch:b?.name||s.branch};
+          });
+          await saveState(BRANCH_TOKEN?'excelImport':'excelImport');
+          renderAll();
+          document.querySelectorAll(".tab").forEach(x => x.classList.remove("active"));
+          document.querySelectorAll(".page").forEach(x => x.classList.remove("active"));
+          document.querySelector('[data-page="dashboard"]').classList.add("active");
+          document.getElementById("dashboard").classList.add("active");
+          toast("Excel data imported and website updated");
+          alert("Excel import complete.\n\nStudents: " + state.students.length + "\nCollection entries: " + state.history.length);
+        } catch (err) {
+          alert("Import failed: " + err.message);
+        }
+      };
+      reader.readAsArrayBuffer(file);
+    }
+    function formatExcelDate(v) { if (v instanceof Date) return v.toISOString().slice(0, 10); const d = new Date(v); return isNaN(d) ? String(v) : d.toISOString().slice(0, 10); }
+    document.getElementById("importFile").addEventListener("change", e => { if (e.target.files[0]) importXlsxFile(e.target.files[0]); e.target.value = ""; });
+    document.addEventListener("change", function (e) {
+      if (e.target && e.target.id === "importFileDash") {
+        const file = e.target.files && e.target.files[0];
+        if (file) importXlsxFile(file);
+        e.target.value = "";
+      }
+    });
+    document.getElementById("search").addEventListener("input", renderStudents);
+    document.getElementById("branchFilter").addEventListener("change", renderStudents);
+    document.querySelectorAll(".tab").forEach(b => b.addEventListener("click", () => { document.querySelectorAll(".tab").forEach(x => x.classList.remove("active")); document.querySelectorAll(".page").forEach(x => x.classList.remove("active")); b.classList.add("active"); document.getElementById(b.dataset.page).classList.add("active"); }));
+    function toast(t) { const x = document.getElementById("toast"); x.textContent = t; x.style.display = "block"; clearTimeout(window._toast); window._toast = setTimeout(() => x.style.display = "none", 2200); }
+
+    function logoutUser(){
+      if(!BRANCH_TOKEN && !ACCESS?.type) return;
+      try {
+        localStorage.removeItem('feesBranchToken');
+        sessionStorage.removeItem('feesBranchToken');
+      } catch(e) {}
+      BRANCH_TOKEN='';
+      ACCESS={type:'main'};
+      ADMIN_PASSWORDS={};
+      window.location.reload();
+    }
+    window.logoutUser = logoutUser;
+
+    function applyAccessUI(){const branchOnly=!!BRANCH_TOKEN;document.querySelectorAll('.main-only').forEach(el=>el.style.display=branchOnly?'none':'');const bf=document.getElementById('branchFilter');if(branchOnly){bf.innerHTML='<option value="'+esc(ACCESS.branchId||'')+'">'+esc(ACCESS.branch||'My Branch')+'</option>';bf.disabled=true;}else{bf.disabled=false;}const title=document.querySelector('header h1');if(title)title.textContent=branchOnly?'Student Fee Management • '+(ACCESS.branch||'Branch'):'Student Fee Management';if(branchOnly){document.querySelectorAll('[data-permission]').forEach(el=>{const key=el.dataset.permission;if(ACCESS.permissions&&ACCESS.permissions[key]===false)el.style.display='none';});}else{document.querySelectorAll('[data-permission]').forEach(el=>el.style.display='');}}
+    async function loadBranches(){if(BRANCH_TOKEN)return;try{const res=await fetch('/api/branches',{headers:{'X-Main-Admin':'true','X-Admin-Password':ADMIN_PASSWORDS.pageOpen,'X-Admin-Action':'pageOpen'}});const d=await res.json();if(!res.ok)throw Error(d.error||'Branch access failed');window._branches=d.branches||[];window._branchUsers=d.users||[];renderBranches();const bf=document.getElementById('branchFilter');if(bf)bf.innerHTML='<option value="">All Branches</option>'+window._branches.map(b=>`<option value="${esc(b._id)}">${esc(b.name)}</option>`).join('');renderAll();}catch(e){toast(e.message||'Branch load failed');}}
+    function renderBranches(){const body=document.getElementById('branchAccessBody');if(!body)return;const users=window._branchUsers||[];body.innerHTML=(window._branches||[]).map(b=>{const u=users.find(x=>String(x.branchId?._id||x.branchId)===String(b._id));const pc=u?Object.values(u.permissions||{}).filter(Boolean).length:0;return `<tr><td><b>${esc(b.name)}</b></td><td>${esc(b.code)}</td><td>${u?`<b>${esc(u.username)}</b><br><span class="muted">Password: ${u.passwordAvailable?esc(u.password):'Reset required'}</span>`:'<span class="muted">No login</span>'}</td><td>${pc}/9</td><td>${b.active?'🟢 Active':'🔴 Inactive'}</td><td><button class="secondary" onclick="editBranchAccess('${b._id}')">Edit</button> <button class="danger" onclick="deleteBranchAccess('${b._id}')">Delete</button></td></tr>`;}).join('')||'<tr><td colspan="6" class="empty">No branches</td></tr>';}
+    async function branchApi(method,body){return fetch('/api/branches',{method,headers:{'Content-Type':'application/json','X-Main-Admin':'true','X-Admin-Password':ADMIN_PASSWORDS.pageOpen,'X-Admin-Action':'pageOpen'},body:body?JSON.stringify(body):undefined});}
+    function permissionChecks(values={}){return Object.entries(PASSWORD_KEYS).map(([k,label])=>`<label style="display:flex;gap:8px;align-items:center;padding:8px;border:1px solid var(--line);border-radius:8px"><input type="checkbox" data-perm="${k}" ${values[k]!==false?'checked':''} style="width:auto">${esc(label)}</label>`).join('');}
+    function openBranchForm(id=null){const b=id?(window._branches||[]).find(x=>x._id===id):null,u=id?(window._branchUsers||[]).find(x=>String(x.branchId?._id||x.branchId)===id):null;window._editingBranchId=id;document.getElementById('branchFormTitle').textContent=id?'✏️ Edit Branch':'🏢 Add Branch';document.getElementById('bfName').value=b?.name||'';document.getElementById('bfCode').value=b?.code||'';document.getElementById('bfUsername').value=u?.username||'';document.getElementById('bfPassword').value=u?.password||'';document.getElementById('bfActive').checked=b?.active!==false;document.getElementById('bfPermissions').innerHTML=permissionChecks(u?.permissions||{});document.getElementById('branchFormError').style.display='none';document.getElementById('branchFormModal').style.display='block';}
+    function closeBranchForm(){document.getElementById('branchFormModal').style.display='none';window._editingBranchId=null;}
+    async function saveBranchForm(){const err=document.getElementById('branchFormError'),name=document.getElementById('bfName').value.trim(),code=document.getElementById('bfCode').value.trim().toUpperCase(),username=document.getElementById('bfUsername').value.trim(),password=document.getElementById('bfPassword').value; if(!name||!code||!username||password.length<4){err.textContent='Branch name, code, username and password (minimum 4 characters) are required.';err.style.display='block';return;}const permissions={};document.querySelectorAll('#bfPermissions [data-perm]').forEach(x=>permissions[x.dataset.perm]=x.checked);try{let r,d;if(window._editingBranchId){r=await branchApi('PUT',{type:'branch',id:window._editingBranchId,name,code,active:document.getElementById('bfActive').checked});d=await r.json();if(!r.ok)throw Error(d.error);const u=(window._branchUsers||[]).find(x=>String(x.branchId?._id||x.branchId)===String(window._editingBranchId));if(u){r=await branchApi('PUT',{type:'user',id:u.id||u._id,username,password,branchId:window._editingBranchId,permissions});d=await r.json();if(!r.ok)throw Error(d.error);}}else{r=await branchApi('POST',{name,code,username,password,active:true,permissions});d=await r.json();if(!r.ok)throw Error(d.error);}closeBranchForm();await loadBranches();toast(window._editingBranchId?'Branch updated':'Branch created');}catch(e){err.textContent=e.message||'Save failed';err.style.display='block';}}
+    async function addBranchAccess(){openBranchForm();}
+    async function editBranchAccess(id){openBranchForm(id);}
+    async function deleteBranchAccess(id){const b=(window._branches||[]).find(x=>x._id===id);if(!b)return;if(!(await askConfirm('Delete Branch',`Delete ${b.name}? It can only be deleted after its students and collections are moved.`)) )return;try{const r=await branchApi('DELETE',{type:'branch',id}),d=await r.json();if(!r.ok)throw Error(d.error);await loadBranches();toast('Branch deleted');}catch(e){toast(e.message||'Delete failed');}}
+    function askConfirm(title,text){return new Promise(resolve=>{document.getElementById('confirmTitle').textContent=title;document.getElementById('confirmText').textContent=text;const c=document.getElementById('confirmCheck'),y=document.getElementById('confirmYes');c.checked=false;y.disabled=true;document.getElementById('confirmModal').style.display='block';window._confirmResolve=resolve;c.onchange=()=>y.disabled=!c.checked;});}
+    function closeConfirm(v){document.getElementById('confirmModal').style.display='none';const r=window._confirmResolve;window._confirmResolve=null;if(r)r(v);}
+
+    renderAll();
+    applyAccessUI();
+    startLiveSync();
+    document.addEventListener("visibilitychange", () => { if (!document.hidden) liveSync(); });
+    window.addEventListener("focus", () => liveSync());
+  </script>
+</body>
+
+</html>
