@@ -589,6 +589,83 @@
       font-size: 13px;
       margin: -4px 0 10px
     }
+
+    /* Mobile-first responsive improvements */
+    html { -webkit-text-size-adjust: 100%; }
+    body { min-width: 0; overflow-x: hidden; }
+    button, input, select, textarea { min-height: 42px; font-size: 16px; }
+    button { touch-action: manipulation; }
+    img, canvas { max-width: 100%; height: auto; }
+    .panel { min-width: 0; }
+    .toolbar > input, .toolbar > select { flex: 1 1 180px; min-width: 140px; }
+    .toolbar > button, .toolbar > .file-label { flex: 0 1 auto; }
+    .file-label { max-width: 100%; }
+    .file-label button { max-width: 100%; }
+
+    @media (max-width: 700px) {
+      header { position: sticky; padding: 11px 12px; }
+      header > div { min-width: 0; }
+      header h1 { font-size: 16px; line-height: 1.25; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+      .wrap { padding: 8px; }
+      .tabs { gap: 6px; margin-bottom: 10px; overflow-x: auto; flex-wrap: nowrap; padding-bottom: 3px; scrollbar-width: thin; }
+      .tab { flex: 0 0 auto; padding: 10px 13px; white-space: nowrap; font-size: 13px; }
+      .panel { padding: 12px; border-radius: 12px; margin-bottom: 12px; }
+      .cards { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+      .card { padding: 12px; border-radius: 11px; }
+      .card .num { font-size: 20px; word-break: break-word; }
+      .card .label { font-size: 10px; }
+      .grid2 { gap: 12px; }
+      .toolbar { gap: 7px; }
+      .toolbar > input, .toolbar > select, .toolbar > button, .toolbar > .file-label { flex: 1 1 100%; width: 100%; min-width: 0 !important; }
+      .toolbar > .file-label button { width: 100%; }
+      .table-wrap { max-width: 100%; overflow-x: auto; -webkit-overflow-scrolling: touch; }
+      table { min-width: 820px; }
+      .history-table-wrap table { min-width: 620px; }
+      th, td { padding: 9px 8px; font-size: 12px; }
+      .payment-row { grid-template-columns: 1fr 1fr; }
+
+      /* Modal forms become single-column and fit small screens. */
+      #branchFormModal, #studentFormModal, #paymentModal, #confirmModal, #securePasswordModal { padding: 8px !important; }
+      #branchFormModal > .panel, #studentFormModal > .panel, #confirmModal > .panel {
+        width: 100% !important; max-width: none !important; margin: 2vh auto !important; padding: 14px !important;
+      }
+      #branchFormModal > .panel > div[style*="grid-template-columns"],
+      #studentFormModal > .panel > div[style*="grid-template-columns"] {
+        grid-template-columns: 1fr !important;
+      }
+      #bfPermissions { grid-template-columns: 1fr !important; }
+      #branchFormModal label, #studentFormModal label { display: flex !important; flex-direction: column; align-items: stretch !important; gap: 5px; width: 100%; }
+      #branchFormModal label:has(input[type="checkbox"]) { flex-direction: row !important; align-items: center !important; }
+      #branchFormModal input:not([type="checkbox"]), #branchFormModal select,
+      #studentFormModal input, #studentFormModal select { width: 100% !important; min-width: 0 !important; }
+      #branchFormModal .secure-password-wrap { width: 100%; }
+      #branchFormModal > .panel > div:last-child,
+      #studentFormModal > .panel > div:last-child,
+      #confirmModal > .panel > div:last-child { flex-direction: column-reverse !important; }
+      #branchFormModal > .panel > div:last-child button,
+      #studentFormModal > .panel > div:last-child button,
+      #confirmModal > .panel > div:last-child button { width: 100%; }
+
+      #pagePasswordLock { padding: 12px; align-items: flex-start; overflow-y: auto; }
+      #pagePasswordCard { width: 100%; max-width: 430px; margin: 7vh auto 20px; padding: 18px; border-radius: 14px; }
+      #pagePasswordCard h2 { font-size: 20px; }
+      #pagePasswordCard > div:first-of-type { display: grid !important; grid-template-columns: 1fr 1fr; }
+      #pagePasswordCard > div:first-of-type button { width: 100%; }
+      #branchLoginFields label { display: block !important; }
+      #branchLoginFields input, #branchLoginFields select { width: 100% !important; min-width: 0 !important; }
+
+      #securePasswordCard { width: 100%; padding: 16px; border-radius: 13px; }
+      #securePasswordCard > div:last-child { display: flex; flex-direction: column-reverse; gap: 8px !important; }
+      #securePasswordCard > div:last-child button { width: 100%; }
+    }
+
+    @media (max-width: 380px) {
+      .cards { grid-template-columns: 1fr; }
+      .logout-btn { font-size: 12px; padding: 7px 8px; }
+      .tab { font-size: 12px; padding: 9px 11px; }
+      #pagePasswordCard > div:first-of-type { grid-template-columns: 1fr; }
+    }
+
   </style>
 </head>
 
