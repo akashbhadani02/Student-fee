@@ -1244,15 +1244,18 @@
       document.getElementById('sfTotal').value=s.totalFee??'';
       document.getElementById('sfPaid').value=s.paidFee??'';
       const sel=document.getElementById('sfBranch');
+      // Main Admin must be able to assign a new student to ANY branch that
+      // exists in the database (including an inactive branch). Branch users
+      // remain restricted to their own branch.
       let bs=BRANCH_TOKEN
         ? (ACCESS.branchId && ACCESS.branch ? [{_id:ACCESS.branchId,name:ACCESS.branch}] : [])
-        : branchList();
-      // Main-admin branch data can be loaded asynchronously. If the list is not
-      // available yet, show the branches already present in the loaded students.
+        : allBranches();
+      // If branch data has not finished loading yet, refresh it before opening
+      // the form so the dropdown contains every branch, not only branches seen
+      // in existing students.
       if(!BRANCH_TOKEN && !bs.length){
-        const seen=new Map();
-        state.students.forEach(x=>{if(x.branchId&&x.branch&&!seen.has(String(x.branchId)))seen.set(String(x.branchId),{_id:x.branchId,name:x.branch});});
-        bs=[...seen.values()];
+        await loadBranches();
+        bs=allBranches();
       }
       sel.innerHTML=bs.length
         ? bs.map(b=>`<option value="${esc(b._id)}">${esc(b.name)}</option>`).join('')
