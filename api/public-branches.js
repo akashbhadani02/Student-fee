@@ -6,7 +6,7 @@ module.exports=async(req,res)=>{
   if(req.method!=='GET') return res.status(405).json({error:'Method not allowed'});
   try{
     await db();
-    const branches=await Branch.find({}).sort({name:1}).lean();
+    const branches=await Branch.find({active:true}).sort({name:1}).lean();
     const users=await BranchUser.find({}).select('username branchId').lean();
     const byBranch=new Map(users.map(u=>[String(u.branchId),u.username]));
     return res.json({branches:branches.map(b=>({_id:b._id,name:b.name,code:b.code,active:b.active!==false,username:byBranch.get(String(b._id))||''}))});

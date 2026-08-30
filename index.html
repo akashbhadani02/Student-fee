@@ -367,6 +367,15 @@
       color: #087443
     }
 
+
+    .fee-mini { font-size:11px; color:var(--muted); margin-top:3px }
+    .payment-btn { background:#0f766e; color:#fff }
+    .receipt-btn { background:#eef2ff; color:#3730a3 }
+    .payment-history { max-height:260px; overflow:auto; border:1px solid var(--line); border-radius:10px; margin-top:12px }
+    .payment-row { display:grid; grid-template-columns:110px 1fr 90px 1.5fr; gap:8px; padding:10px; border-bottom:1px solid var(--line); font-size:12px }
+    .payment-row:last-child { border-bottom:0 }
+    @media(max-width:600px){.payment-row{grid-template-columns:1fr 1fr}.payment-row span:nth-child(4){grid-column:1/-1}}
+
     /* Page password lock */
     #pagePasswordLock {
       position: fixed;
@@ -628,9 +637,9 @@
         btn.disabled = true; btn.textContent = "Checking..."; error.style.display = "none";
         try {
           if (window._loginMode === 'branch') {
-            const username = document.getElementById('branchUsername').value.trim();
+            const username = document.getElementById('branchUsername').value.trim().toLowerCase();
             const password = document.getElementById('branchPassword').value;
-            const res = await fetch('/api/auth',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'branchLogin',username,password})});
+            const res = await fetch('/api/auth',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'branchLogin',branchId:document.getElementById('branchLoginBranch').value,username,password})});
             const data = await res.json(); if(!res.ok || !data.ok) throw new Error(data.error || 'Invalid login');
             BRANCH_TOKEN=data.token; localStorage.setItem('feesBranchToken',BRANCH_TOKEN); ACCESS=data.user;
             lock.remove(); document.body.classList.remove('page-locked'); applyAccessUI(); loadState(); loadBranches(); return;
@@ -645,7 +654,7 @@
         finally { btn.disabled = false; btn.textContent = "Open Page"; }
       }
       async function loadBranchLoginChoices(){try{const r=await fetch('/api/public-branches',{cache:'no-store'}),d=await r.json();if(!r.ok)throw Error(d.error||'Branch list failed');const sel=document.getElementById('branchLoginBranch');sel.innerHTML=(d.branches||[]).map(b=>`<option value="${esc(b._id)}" data-username="${esc(b.username)}">${esc(b.name)}</option>`).join('')||'<option value="">No active branches</option>';const sync=()=>{const o=sel.selectedOptions[0];if(o?.dataset.username)document.getElementById('branchUsername').value=o.dataset.username;};sel.onchange=sync;sync();}catch(e){document.getElementById('branchLoginBranch').innerHTML='<option value="">Unable to load branches</option>';}}
-      window._loginMode='main'; document.getElementById('mainLoginMode').onclick=()=>{window._loginMode='main';document.getElementById('branchLoginFields').style.display='none';document.getElementById('pagePasswordInput').style.display='block';document.getElementById('loginHint').textContent='Student Fee Management open કરવા main admin password નાખો.';}; document.getElementById('branchLoginMode').onclick=()=>{window._loginMode='branch';document.getElementById('branchLoginFields').style.display='block';document.getElementById('pagePasswordInput').style.display='none';document.getElementById('loginHint').textContent='તમારી branch select કરો અને username/password નાખો.';loadBranchLoginChoices();};
+      window._loginMode='main'; document.getElementById('mainLoginMode').onclick=()=>{window._loginMode='main';document.getElementById('branchLoginFields').style.display='none';document.getElementById('pagePasswordInput').style.display='block';document.getElementById('loginHint').textContent='Student Fee Management open કરવા main admin password નાખો.';}; document.getElementById('branchUsername').addEventListener('input',e=>{e.target.value=e.target.value.toLowerCase();}); document.getElementById('branchLoginMode').onclick=()=>{window._loginMode='branch';document.getElementById('branchLoginFields').style.display='block';document.getElementById('pagePasswordInput').style.display='none';document.getElementById('loginHint').textContent='તમારી branch select કરો અને username/password નાખો.';loadBranchLoginChoices();};
       btn.addEventListener("click", unlock); input.addEventListener("keydown", e => { if (e.key === "Enter") unlock(); });
       if(BRANCH_TOKEN){ fetch('/api/state',{headers:{Authorization:'Bearer '+BRANCH_TOKEN}}).then(r=>{if(!r.ok)throw Error('expired');return r.json()}).then(d=>{ACCESS=d.access||ACCESS;lock.remove();document.body.classList.remove('page-locked');applyAccessUI();loadState();}).catch(()=>{BRANCH_TOKEN='';localStorage.removeItem('feesBranchToken');}); }
       setTimeout(() => input.focus(), 50);
@@ -878,7 +887,7 @@
       </div>
     </section>
 
-    <section id="branches" class="page main-only"><div class="panel"><div class="toolbar"><button class="primary" onclick="addBranchAccess()">+ Add Branch & Login</button><button class="secondary" onclick="loadBranches()">↻ Refresh</button></div><p class="hint">Main Admin અહીં branch બનાવશે અને દરેક branch માટે અલગ username/password તથા view/action permissions આપશે.</p><div class="table-wrap"><table><thead><tr><th>Branch</th><th>Code</th><th>Login</th><th>Permissions</th><th>Status</th><th>Action</th></tr></thead><tbody id="branchAccessBody"></tbody></table></div></div></section>
+    <section id="branches" class="page main-only"><div class="panel"><div class="toolbar"><button class="primary" onclick="addBranchAccess()">+ Add Branch & Login</button><button class="secondary" onclick="loadBranches()">↻ Refresh</button></div><p class="hint">અહીંથી દરેક branch નું <b>Login ID (Username)</b> અને <b>Password</b> જોઈ અને બદલી શકો છો. અહીં Save કરેલા નવા credentials તરત જ Branch Login માં કામ કરશે.</p><div class="table-wrap"><table><thead><tr><th>Branch</th><th>Code</th><th>Login</th><th>Permissions</th><th>Status</th><th>Action</th></tr></thead><tbody id="branchAccessBody"></tbody></table></div></div></section>
 
     <section id="excel" class="page">
       <div class="panel">
@@ -907,8 +916,29 @@
       </div>
     </section>
   </div>
-  <div id="branchFormModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:10000;padding:18px;overflow:auto"><div class="panel" style="max-width:720px;margin:4vh auto"><h3 id="branchFormTitle">🏢 Add Branch</h3><div id="branchFormError" class="error" style="display:none"></div><div style="display:grid;grid-template-columns:1fr 1fr;gap:12px"><label>Branch Name<input id="bfName"></label><label>Branch Code<input id="bfCode"></label><label>Login Username<input id="bfUsername"></label><label>Password<input id="bfPassword" type="text" autocomplete="off"></label><label style="display:flex;align-items:center;gap:8px"><input id="bfActive" type="checkbox" checked style="width:auto"> Active</label></div><div style="margin-top:16px"><b>Permissions</b><div id="bfPermissions" style="display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin-top:10px"></div></div><div style="display:flex;justify-content:flex-end;gap:10px;margin-top:18px"><button class="secondary" onclick="closeBranchForm()">Cancel</button><button class="primary" onclick="saveBranchForm()">Save Branch</button></div></div></div>
+  <div id="branchFormModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:10000;padding:18px;overflow:auto"><div class="panel" style="max-width:720px;margin:4vh auto"><h3 id="branchFormTitle">🏢 Add Branch</h3><div id="branchFormError" class="error" style="display:none"></div><div style="display:grid;grid-template-columns:1fr 1fr;gap:12px"><label>Branch Name<input id="bfName"></label><label>Branch Code<input id="bfCode"></label><label>Login ID / Username<input id="bfUsername" placeholder="Branch login ID"></label><label>Password<div class="secure-password-wrap"><input id="bfPassword" class="secure-password-input" type="password" autocomplete="new-password" placeholder="Change password here" style="width:100%;padding-right:44px"><button class="secure-password-eye" type="button" aria-label="Show password" onclick="toggleSecureInput('bfPassword',this)">👁</button></div></label><label style="display:flex;align-items:center;gap:8px"><input id="bfActive" type="checkbox" checked style="width:auto"> Active</label></div><div style="margin-top:16px"><b>Permissions</b><div id="bfPermissions" style="display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin-top:10px"></div></div><div style="display:flex;justify-content:flex-end;gap:10px;margin-top:18px"><button class="secondary" onclick="closeBranchForm()">Cancel</button><button class="primary" onclick="saveBranchForm()">Save Branch</button></div></div></div>
   <div id="studentFormModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:9999;padding:18px;overflow:auto"><div class="panel" style="max-width:560px;margin:5vh auto"><h3 id="studentFormTitle">👨‍🎓 Add Student</h3><div id="studentFormError" class="error" style="display:none"></div><div style="display:grid;gap:10px"><label>Student Name<input id="sfName"></label><label>Mobile Number<input id="sfMobile"></label><label>Branch<select id="sfBranch"></select></label><label>Total Fee<input id="sfTotal" type="number"></label><label>Paid Fee<input id="sfPaid" type="number"></label></div><div style="display:flex;justify-content:flex-end;gap:10px;margin-top:18px"><button class="secondary" onclick="closeStudentForm()">Cancel</button><button class="primary" onclick="saveStudentForm()">Save Student</button></div></div></div>
+  <div id="paymentModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:10002;padding:18px;overflow:auto">
+    <div class="panel" style="max-width:650px;margin:5vh auto">
+      <div style="display:flex;justify-content:space-between;align-items:center;gap:12px">
+        <div><h3 style="margin:0">💳 Collect Student Fee</h3><div id="paymentStudentInfo" class="hint"></div></div>
+        <button class="secondary" onclick="closePaymentModal()">✕</button>
+      </div>
+      <div id="paymentError" class="error" style="display:none;margin-top:10px"></div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:16px">
+        <label>Amount<input id="paymentAmount" type="number" min="1" step="0.01" placeholder="Enter amount"></label>
+        <label>Date<input id="paymentDate" type="date"></label>
+        <label>Payment Method<select id="paymentMethod"><option>Cash</option><option>UPI</option><option>Bank Transfer</option><option>Cheque</option><option>Other</option></select></label>
+        <label>Note<input id="paymentNote" placeholder="Optional note"></label>
+      </div>
+      <div id="paymentSummary" class="panel" style="margin:14px 0 0;padding:12px;background:#f8fafc;box-shadow:none"></div>
+      <div class="payment-history" id="paymentHistory"></div>
+      <div style="display:flex;justify-content:flex-end;gap:10px;margin-top:16px">
+        <button class="secondary" onclick="closePaymentModal()">Close</button>
+        <button class="primary" onclick="savePayment()">Save Payment</button>
+      </div>
+    </div>
+  </div>
   <div id="confirmModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:10001;padding:18px"><div class="panel" style="max-width:460px;margin:15vh auto"><h3 id="confirmTitle">Confirm</h3><p id="confirmText"></p><label style="display:flex;gap:8px;align-items:center;margin:14px 0"><input id="confirmCheck" type="checkbox" style="width:auto"> <span>I understand this action.</span></label><div style="display:flex;justify-content:flex-end;gap:10px"><button class="secondary" onclick="closeConfirm(false)">Cancel</button><button class="danger" id="confirmYes" onclick="closeConfirm(true)" disabled>Continue</button></div></div></div>
   <div id="passwordSettingsModal"
     style="display:none;position:fixed;inset:0;z-index:999998;background:rgba(10,18,35,.62);padding:18px;overflow:auto">
@@ -1022,7 +1052,7 @@
     window.addEventListener("online", liveSync);
     function money(v) { return "₹" + Number(v || 0).toLocaleString("en-IN", { maximumFractionDigits: 2 }); }
     function num(v) { if (v === "" || v == null || isNaN(Number(v))) return null; return Number(v); }
-    function calc(s) { const total = Number(s.totalFee || 0), paid = Number(s.paidFee || 0); return { total, paid, p25: s.paidFee == null ? 0 : paid * .25, remaining: total - paid }; }
+    function calc(s) { const total = Math.max(0, Number(s.totalFee || 0)); const paid = Math.max(0, Number(s.paidFee || 0)); return { total, paid, p25: s.paidFee == null ? 0 : paid * .25, remaining: Math.max(0, total - paid) }; }
     function status(s) { const c = calc(s); if (c.total <= 0 && c.paid <= 0) return ["No Fee", "partial"]; if (c.remaining <= 0) return ["Paid", "paid"]; if (c.paid > 0) return ["Partial", "partial"]; return ["Due", "due"]; }
     function branchName(b) { const x=(window._branches||[]).find(x=>String(x._id)===String(b)); return x?.name || String(b||'').trim() || 'Unassigned'; }
     function branchClass(b) { const n=branchName(b); return 'branch-' + n.toLowerCase().replace(/[^a-z0-9]+/g,'-'); }
@@ -1049,7 +1079,7 @@
       const arr=state.students.filter(s=>(!q||String(s.name||'').toLowerCase().includes(q)||String(s.id||'').toLowerCase().includes(q)||String(s.mobile||'').toLowerCase().includes(q))&&(!bf||String(s.branchId||'')===bf||branchName(s.branch)===bf));
       document.getElementById("studentBody").innerHTML = arr.length ? arr.map(s => {
         const c = calc(s), st = status(s);
-        return `<tr><td>${s.id}</td><td>${esc(s.name)}</td><td>${esc(s.mobile || "")}</td><td><span class="branch-badge ${branchClass(s.branch)}">${branchName(s.branch)}</span></td><td class="num">${money(c.total)}</td><td class="num">${money(c.paid)}</td><td class="num">${money(c.p25)}</td><td class="num">${money(c.remaining)}</td><td><span class="badge ${st[1]}">${st[0]}</span></td><td><button class="secondary" onclick="editStudent('${s.id}')">Edit</button> <button class="danger" onclick="deleteStudent('${s.id}')">Delete</button></td></tr>`;
+        return `<tr><td>${s.id}</td><td>${esc(s.name)}</td><td>${esc(s.mobile || "")}</td><td><span class="branch-badge ${branchClass(s.branch)}">${branchName(s.branch)}</span></td><td class="num">${money(c.total)}</td><td class="num">${money(c.paid)}</td><td class="num">${money(c.p25)}</td><td class="num">${money(c.remaining)}</td><td><span class="badge ${st[1]}">${st[0]}</span></td><td><button class="payment-btn" onclick="openPayment('${s.id}')">Collect</button> <button class="receipt-btn" onclick="printReceipt('${s.id}')">Receipt</button> <button class="secondary" onclick="editStudent('${s.id}')">Edit</button> <button class="danger" onclick="deleteStudent('${s.id}')">Delete</button></td></tr>`;
       }).join("") : `<tr><td colspan="10" class="empty">No students match the filter.</td></tr>`;
     }
     function renderHistory(){
@@ -1113,7 +1143,7 @@
     async function verifyFilePassword(actionKey) { return verifyAdminAction(actionKey); }
     async function addStudent(){if(!(await verifyAdminAction('studentAdd')))return;if(!BRANCH_TOKEN&&!(window._branches||[]).length)await loadBranches();openStudentForm(null);}
     async function openStudentForm(id){
-      const s=id?state.students.find(x=>x.id===id):{id:'',name:'',mobile:'',branchId:'',branch:'',totalFee:null,paidFee:null};
+      const s=id?state.students.find(x=>x.id===id):{id:'',name:'',mobile:'',branchId:'',branch:'',totalFee:null,paidFee:null,payments:[]};
       window._editingStudentId=id||null;
       document.getElementById('studentFormTitle').textContent=id?'✏️ Edit Student':'👨‍🎓 Add Student';
       document.getElementById('sfName').value=s.name||'';
@@ -1159,7 +1189,12 @@
         if(BRANCH_TOKEN){ newId='S'+Date.now().toString().slice(-10); while(used.has(newId)) newId='S'+Date.now().toString().slice(-10)+Math.floor(Math.random()*10); }
         student={id:newId}; state.students.push(student);
       }
-      Object.assign(student,{name,mobile:document.getElementById('sfMobile').value.trim(),branch,branchId:bid,totalFee:num(document.getElementById('sfTotal').value),paidFee:num(document.getElementById('sfPaid').value)});
+      const totalFee=num(document.getElementById('sfTotal').value);
+      const paidFee=num(document.getElementById('sfPaid').value);
+      if(totalFee!=null && totalFee<0){err.textContent='Total Fee cannot be negative.';err.style.display='block';return;}
+      if(paidFee!=null && paidFee<0){err.textContent='Paid Fee cannot be negative.';err.style.display='block';return;}
+      if(totalFee!=null && paidFee!=null && paidFee>totalFee){err.textContent='Paid Fee cannot be greater than Total Fee.';err.style.display='block';return;}
+      Object.assign(student,{name,mobile:document.getElementById('sfMobile').value.trim(),branch,branchId:bid,totalFee,paidFee,payments:Array.isArray(student.payments)?student.payments:[]});
       try{await saveState(id?'studentEdit':'studentAdd');closeStudentForm();toast('Student saved');}
       catch(e){err.textContent=e.message||'Student save failed';err.style.display='block';}
     }
@@ -1167,6 +1202,50 @@
     async function deleteStudent(id) {
       if (!(await verifyAdminAction("studentDelete"))) return;
       if (await askConfirm('Delete Student','This student will be permanently removed.')) { state.students=state.students.filter(s=>s.id!==id); await saveState('studentDelete'); toast('Student deleted'); }
+    }
+
+    function paymentTotal(s){return Array.isArray(s?.payments)?s.payments.reduce((a,p)=>a+Number(p.amount||0),0):0;}
+    function openPayment(id){
+      const s=state.students.find(x=>String(x.id)===String(id)); if(!s)return;
+      window._paymentStudentId=id;
+      document.getElementById('paymentStudentInfo').textContent=`${s.id} • ${s.name} • ${branchName(s.branch)}`;
+      document.getElementById('paymentAmount').value='';
+      document.getElementById('paymentDate').value=new Date().toISOString().slice(0,10);
+      document.getElementById('paymentMethod').value='Cash';
+      document.getElementById('paymentNote').value='';
+      document.getElementById('paymentError').style.display='none';
+      renderPaymentModal(s);
+      document.getElementById('paymentModal').style.display='block';
+    }
+    function closePaymentModal(){document.getElementById('paymentModal').style.display='none';window._paymentStudentId=null;}
+    function renderPaymentModal(s){
+      const c=calc(s), payments=Array.isArray(s.payments)?[...s.payments].reverse():[];
+      document.getElementById('paymentSummary').innerHTML=`<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px"><div><span class="muted">Total Fee</span><br><b>${money(c.total)}</b></div><div><span class="muted">Paid</span><br><b>${money(c.paid)}</b></div><div><span class="muted">Remaining</span><br><b>${money(Math.max(0,c.remaining))}</b></div></div>`;
+      document.getElementById('paymentHistory').innerHTML=payments.length?payments.map(p=>`<div class="payment-row"><span><b>${esc(p.date)}</b></span><span>${money(p.amount)}</span><span>${esc(p.method||'Cash')}</span><span>${esc(p.note||'')}</span></div>`).join(''):'<div class="empty">No payment history yet.</div>';
+    }
+    async function savePayment(){
+      if(!(await verifyAdminAction('collectionAdd')))return;
+      const id=window._paymentStudentId,s=state.students.find(x=>String(x.id)===String(id)); if(!s)return;
+      const amount=num(document.getElementById('paymentAmount').value), date=document.getElementById('paymentDate').value;
+      const method=document.getElementById('paymentMethod').value, note=document.getElementById('paymentNote').value.trim();
+      const err=document.getElementById('paymentError');
+      if(!amount||amount<=0){err.textContent='Valid payment amount enter કરો.';err.style.display='block';return;}
+      if(!date){err.textContent='Payment date required.';err.style.display='block';return;}
+      const total=Number(s.totalFee||0), paid=Number(s.paidFee||0);
+      if(total>0 && paid+amount>total){err.textContent=`Payment cannot exceed remaining fee of ${money(Math.max(0,total-paid))}.`;err.style.display='block';return;}
+      if(!Array.isArray(s.payments))s.payments=[];
+      s.payments.push({amount,date,method,note,createdAt:new Date().toISOString()});
+      s.paidFee=paid+amount;
+      try{await saveState('collectionAdd');renderPaymentModal(s);document.getElementById('paymentAmount').value='';document.getElementById('paymentNote').value='';toast('Payment saved successfully');}
+      catch(e){s.paidFee=paid;s.payments.pop();err.textContent=e.message||'Payment save failed';err.style.display='block';}
+    }
+    function printReceipt(id){
+      const s=state.students.find(x=>String(x.id)===String(id));if(!s)return;
+      const payments=Array.isArray(s.payments)?s.payments:[]; const last=payments[payments.length-1];
+      const c=calc(s);
+      const w=window.open('','_blank','width=760,height=700');if(!w){toast('Please allow pop-ups to print receipt.');return;}
+      w.document.write(`<!doctype html><html><head><title>Fee Receipt - ${esc(s.id)}</title><style>body{font-family:Arial,sans-serif;padding:35px;color:#172033} .box{border:1px solid #ddd;border-radius:12px;padding:24px;max-width:650px;margin:auto}h1{margin-top:0}table{width:100%;border-collapse:collapse}td{padding:10px;border-bottom:1px solid #eee}.right{text-align:right}.total{font-size:20px;font-weight:bold}</style></head><body><div class="box"><h1>Student Fee Receipt</h1><p><b>Student ID:</b> ${esc(s.id)}<br><b>Name:</b> ${esc(s.name)}<br><b>Branch:</b> ${esc(branchName(s.branch))}</p><table><tr><td>Total Fee</td><td class="right">${money(c.total)}</td></tr><tr><td>Total Paid</td><td class="right">${money(c.paid)}</td></tr><tr><td>Remaining</td><td class="right">${money(Math.max(0,c.remaining))}</td></tr>${last?`<tr><td>Latest Payment</td><td class="right">${money(last.amount)} • ${esc(last.date)}</td></tr>`:''}</table><p style="margin-top:30px">Generated on ${new Date().toLocaleString('en-IN')}</p><button onclick="window.print()">Print Receipt</button></div></body></html>`);
+      w.document.close();
     }
     async function addHistory(){if(!(await verifyAdminAction("collectionAdd")))return;await editHistory(null,true);}
     async function editHistory(i,alreadyVerified=false){
@@ -1237,16 +1316,17 @@
       const historyStart = 8 + state.students.length;
       rows.push([]);
       rows.push(["COLLECTION HISTORY"]);
-      rows.push(["Date", "Velanja", "Mota Varachha", "Mission Road", "Total Collection"]);
+      rows.push(["Date", "Branch", "Collection", "Payment Method", "Note"]);
 
       state.history.forEach((x, i) => {
         const r = historyStart + i;
+        const amount = x.amount != null ? Number(x.amount || 0) : Number(x.velanja || 0) + Number(x.mota || 0) + Number(x.mission || 0);
         rows.push([
           x.date || "",
-          x.velanja ?? "",
-          x.mota ?? "",
-          x.mission ?? "",
-          { f: `=SUM(B${r}:D${r})` }
+          x.branch || branchName(x.branchId) || "",
+          amount,
+          x.method || "",
+          x.note || ""
         ]);
       });
 
@@ -1255,10 +1335,10 @@
       rows.push(["SUMMARY"]);
       rows.push(["Metric", "Value"]);
       rows.push(["Total Students", { f: `=COUNTA(A6:A${5 + state.students.length})` }]);
-      rows.push(["Total Fee", { f: `=SUM(C6:C${5 + state.students.length})` }]);
-      rows.push(["Total Paid Fee", { f: `=SUM(D6:D${5 + state.students.length})` }]);
-      rows.push(["Total Paid Fee 25%", { f: `=SUM(E6:E${5 + state.students.length})` }]);
-      rows.push(["Total Remaining", { f: `=SUM(F6:F${5 + state.students.length})` }]);
+      rows.push(["Total Fee", { f: `=SUM(E6:E${5 + state.students.length})` }]);
+      rows.push(["Total Paid Fee", { f: `=SUM(F6:F${5 + state.students.length})` }]);
+      rows.push(["Total Paid Fee 25%", { f: `=SUM(G6:G${5 + state.students.length})` }]);
+      rows.push(["Total Remaining", { f: `=SUM(H6:H${5 + state.students.length})` }]);
       rows.push(["Total Collection History", { f: `=IFERROR(SUM(E${historyStart}:E${historyStart + Math.max(state.history.length - 1, 0)}),0)` }]);
       rows.push(["Velanja Students", { f: `=COUNTIF(B6:B${5 + state.students.length},"Velanja")` }]);
       rows.push(["Mota Varachha Students", { f: `=COUNTIF(B6:B${5 + state.students.length},"Mota Varachha")` }]);
@@ -1357,7 +1437,8 @@
             let historyHeader = -1;
             for (let i = studentHeader + 1; i < a.length; i++) {
               if (String(a[i][0]).trim().toUpperCase() === "DATE" &&
-                String(a[i][1]).trim().toUpperCase() === "VELANJA") {
+                String(a[i][1]).trim().toUpperCase() === "BRANCH" &&
+                String(a[i][2]).trim().toUpperCase() === "COLLECTION") {
                 historyHeader = i;
                 break;
               }
@@ -1380,19 +1461,15 @@
 
             if (historyHeader >= 0) {
               const hh = a[historyHeader].map(x => String(x).trim().toLowerCase());
-              const di = hh.indexOf("date"), vi = hh.indexOf("velanja"), mi = hh.indexOf("mota varachha"), mii = hh.indexOf("mission road");
+              const di = hh.indexOf("date"), bi = hh.indexOf("branch"), ai = hh.indexOf("collection"), methodIdx = hh.indexOf("payment method"), noteIdx = hh.indexOf("note");
               for (let i = historyHeader + 1; i < a.length; i++) {
                 const row = a[i];
-                const rawDate = row[di];
-                if (rawDate === undefined || rawDate === "") continue;
+                const rawDate = row[di], branch = String(row[bi] ?? "").trim();
+                if (rawDate === undefined || rawDate === "" || !branch) continue;
                 const date = formatExcelDate(rawDate);
-                if (!date) continue;
-                hist.push({
-                  date,
-                  velanja: num(row[vi]),
-                  mota: num(row[mi]),
-                  mission: num(row[mii])
-                });
+                const amount = num(row[ai]);
+                if (!date || amount == null || amount <= 0) continue;
+                hist.push({ date, branch, amount, method: String(row[methodIdx] ?? "Cash").trim() || "Cash", note: String(row[noteIdx] ?? "").trim() });
               }
             }
           } else {
@@ -1455,20 +1532,18 @@
             return { ...s, id };
           });
 
-          // Convert the exported three-column branch history into the same
-          // branch-specific records used by the live database.
           if (hist.length) {
             const branchByName = new Map((window._branches||[]).map(b=>[String(b.name).trim().toLowerCase(),b]));
             const converted=[];
             for(const h of hist){
-              for(const [name,val] of [['Velanja',h.velanja],['Mota Varachha',h.mota],['Mission Road',h.mission]]){
-                const n=Number(val||0); if(!n) continue;
-                const b=branchByName.get(name.toLowerCase());
-                if(b) converted.push({date:h.date,branch:b.name,branchId:b._id,amount:n,velanja:null,mota:null,mission:null});
-              }
+              const b=branchByName.get(String(h.branch||"").trim().toLowerCase());
+              if(!b) continue;
+              converted.push({date:h.date,branch:b.name,branchId:b._id,amount:Number(h.amount||0),method:h.method||"Cash",note:h.note||"",velanja:null,mota:null,mission:null});
             }
             if(BRANCH_TOKEN) state.history=converted.filter(h=>String(h.branchId)===String(ACCESS.branchId));
             else state.history=converted;
+          } else {
+            state.history=[];
           }
           state.students = out.map(s=>{
             const b=(window._branches||[]).find(x=>String(x.name).trim().toLowerCase()===String(s.branch||'').trim().toLowerCase());
@@ -1534,7 +1609,7 @@
           const pr=await fetch('/api/public-branches?ts='+Date.now(),{cache:'no-store'}); const pd=await pr.json();
           if(pr.ok && Array.isArray(pd.branches) && pd.branches.length){
             window._branches=pd.branches.map(b=>({_id:b._id,name:b.name,code:b.code,active:b.active!==false}));
-            window._branchUsers=(pd.branches||[]).filter(b=>b.username).map(b=>({username:b.username,branchId:b._id,passwordAvailable:false,password:''}));
+            window._branchUsers=(pd.branches||[]).filter(b=>b.username).map(b=>({id:b.userId||'',username:b.username,branchId:b._id,passwordAvailable:false,password:''}));
             renderBranches(); syncBranchFilters(); renderAll(); return;
           }
         }catch(_){ }
@@ -1543,13 +1618,40 @@
         window._branches=[...map.values()]; renderBranches(); syncBranchFilters(); renderAll(); console.warn('Branch load failed:',e);
       }
     }
-    function renderBranches(){const body=document.getElementById('branchAccessBody');if(!body)return;const users=window._branchUsers||[];body.innerHTML=(window._branches||[]).map(b=>{const u=users.find(x=>String(x.branchId?._id||x.branchId)===String(b._id));const pc=u?Object.values(u.permissions||{}).filter(Boolean).length:0;return `<tr><td><b>${esc(b.name)}</b></td><td>${esc(b.code)}</td><td>${u?`<b>${esc(u.username)}</b><br><span class="muted">Password: ${u.passwordAvailable?esc(u.password):'Reset required'}</span>`:'<span class="muted">No login</span>'}</td><td>${pc}/9</td><td>${b.active?'🟢 Active':'🔴 Inactive'}</td><td><button class="secondary" onclick="editBranchAccess('${b._id}')">Edit</button> <button class="danger" onclick="deleteBranchAccess('${b._id}')">Delete</button></td></tr>`;}).join('')||'<tr><td colspan="6" class="empty">No branches</td></tr>';}
+    function renderBranches(){const body=document.getElementById('branchAccessBody');if(!body)return;const users=window._branchUsers||[];body.innerHTML=(window._branches||[]).map(b=>{const u=users.find(x=>String(x.branchId?._id||x.branchId)===String(b._id));const pc=u?Object.values(u.permissions||{}).filter(Boolean).length:0;const login=u?`<div><b>ID: ${esc(u.username)}</b><br><span class="muted">Password: ${u.passwordAvailable?esc(u.password):'Password hidden — click Change ID / Password'}</span></div>`:'<span class="muted">No login</span>';return `<tr><td><b>${esc(b.name)}</b></td><td>${esc(b.code)}</td><td>${login}</td><td>${pc}/9</td><td>${b.active?'🟢 Active':'🔴 Inactive'}</td><td><button class="primary" onclick="changeBranchCredentials('${b._id}')">Change ID / Password</button> <button class="secondary" onclick="editBranchAccess('${b._id}')">Edit Branch</button> <button class="danger" onclick="deleteBranchAccess('${b._id}')">Delete</button></td></tr>`;}).join('')||'<tr><td colspan="6" class="empty">No branches</td></tr>';}
     async function branchApi(method,body){return fetch('/api/branches',{method,headers:{'Content-Type':'application/json','X-Main-Admin':'true','X-Admin-Password':ADMIN_PASSWORDS.pageOpen,'X-Admin-Action':'pageOpen'},body:body?JSON.stringify(body):undefined});}
     function permissionChecks(values={}){return Object.entries(PASSWORD_KEYS).map(([k,label])=>`<label style="display:flex;gap:8px;align-items:center;padding:8px;border:1px solid var(--line);border-radius:8px"><input type="checkbox" data-perm="${k}" ${values[k]!==false?'checked':''} style="width:auto">${esc(label)}</label>`).join('');}
-    function openBranchForm(id=null){const b=id?(window._branches||[]).find(x=>x._id===id):null,u=id?(window._branchUsers||[]).find(x=>String(x.branchId?._id||x.branchId)===id):null;window._editingBranchId=id;document.getElementById('branchFormTitle').textContent=id?'✏️ Edit Branch':'🏢 Add Branch';document.getElementById('bfName').value=b?.name||'';document.getElementById('bfCode').value=b?.code||'';document.getElementById('bfUsername').value=u?.username||'';document.getElementById('bfPassword').value=u?.password||'';document.getElementById('bfActive').checked=b?.active!==false;document.getElementById('bfPermissions').innerHTML=permissionChecks(u?.permissions||{});document.getElementById('branchFormError').style.display='none';document.getElementById('branchFormModal').style.display='block';}
+    function openBranchForm(id=null){const b=id?(window._branches||[]).find(x=>x._id===id):null,u=id?(window._branchUsers||[]).find(x=>String(x.branchId?._id||x.branchId)===id):null;window._editingBranchId=id;document.getElementById('branchFormTitle').textContent=id?'🔐 Edit Branch Login / Access':'🏢 Add Branch';document.getElementById('bfName').value=b?.name||'';document.getElementById('bfCode').value=b?.code||'';document.getElementById('bfUsername').value=(u?.username||'').toLowerCase();document.getElementById('bfPassword').value=u?.password||'';document.getElementById('bfPassword').dataset.passwordVisible='false';document.getElementById('bfPassword').type='password';document.getElementById('bfActive').checked=b?.active!==false;document.getElementById('bfPermissions').innerHTML=permissionChecks(u?.permissions||{});document.getElementById('branchFormError').style.display='none';document.getElementById('branchFormModal').style.display='block';}
     function closeBranchForm(){document.getElementById('branchFormModal').style.display='none';window._editingBranchId=null;}
-    async function saveBranchForm(){const err=document.getElementById('branchFormError'),editingId=window._editingBranchId,name=document.getElementById('bfName').value.trim(),code=document.getElementById('bfCode').value.trim().toUpperCase(),username=document.getElementById('bfUsername').value.trim(),password=document.getElementById('bfPassword').value;if(!name||!code||!username){err.textContent='Branch name, code and username are required.';err.style.display='block';return;}if(!editingId&&password.length<4){err.textContent='Password is required for a new branch (minimum 4 characters).';err.style.display='block';return;}if(editingId&&password&&password.length<4){err.textContent='If changing the password, use at least 4 characters. Leave it blank to keep the existing password.';err.style.display='block';return;}const permissions={};document.querySelectorAll('#bfPermissions [data-perm]').forEach(x=>permissions[x.dataset.perm]=x.checked);try{let r,d;if(editingId){r=await branchApi('PUT',{type:'branch',id:editingId,name,code,active:document.getElementById('bfActive').checked});d=await r.json();if(!r.ok)throw Error(d.error);const u=(window._branchUsers||[]).find(x=>String(x.branchId?._id||x.branchId)===String(editingId));if(u){const userBody={type:'user',id:u.id||u._id,username,branchId:editingId,permissions};if(password)userBody.password=password;r=await branchApi('PUT',userBody);d=await r.json();if(!r.ok)throw Error(d.error);}}else{r=await branchApi('POST',{name,code,username,password,active:true,permissions});d=await r.json();if(!r.ok)throw Error(d.error);}closeBranchForm();await loadBranches();toast(editingId?'Branch updated':'Branch created');}catch(e){err.textContent=e.message||'Save failed';err.style.display='block';}}
+    async function saveBranchForm(){
+      const err=document.getElementById('branchFormError'),editingId=window._editingBranchId;
+      const name=document.getElementById('bfName').value.trim(),code=document.getElementById('bfCode').value.trim().toUpperCase();
+      const username=document.getElementById('bfUsername').value.trim().toLowerCase(),password=document.getElementById('bfPassword').value;
+      const existingUser=editingId?(window._branchUsers||[]).find(x=>String(x.branchId?._id||x.branchId)===String(editingId)):null;
+      if(!name||!code||!username){err.textContent='Branch name, code and username are required.';err.style.display='block';return;}
+      if(!editingId&&password.length<4){err.textContent='Password is required for a new branch (minimum 4 characters).';err.style.display='block';return;}
+      if(editingId&&!existingUser&&!password){err.textContent='This branch has no saved login yet. Enter a password to create its login.';err.style.display='block';return;}
+      if(editingId&&password&&password.length<4){err.textContent='If changing the password, use at least 4 characters. Leave it blank to keep the existing password.';err.style.display='block';return;}
+      const permissions={};document.querySelectorAll('#bfPermissions [data-perm]').forEach(x=>permissions[x.dataset.perm]=x.checked);
+      try{
+        let r,d;
+        if(editingId){
+          // Save branch details first.
+          r=await branchApi('PUT',{type:'branch',id:editingId,name,code,active:document.getElementById('bfActive').checked});
+          d=await r.json();if(!r.ok)throw Error(d.error);
+          // ALWAYS save login/access too. If no BranchUser exists, the API creates one.
+          const userBody={type:'user',id:(existingUser?.id||existingUser?._id||''),username,branchId:editingId,permissions};
+          if(password)userBody.password=password;
+          r=await branchApi('PUT',userBody);d=await r.json();if(!r.ok)throw Error(d.error);
+        }else{
+          r=await branchApi('POST',{name,code,username,password,active:document.getElementById('bfActive').checked,permissions});
+          d=await r.json();if(!r.ok)throw Error(d.error);
+        }
+        closeBranchForm();await loadBranches();toast(editingId?'Branch, Login ID and Access saved successfully':'Branch created');
+      }catch(e){err.textContent=e.message||'Save failed';err.style.display='block';}
+    }
     async function addBranchAccess(){openBranchForm();}
+    function changeBranchCredentials(id){openBranchForm(id);setTimeout(()=>{const el=document.getElementById('bfUsername');if(el)el.focus();},50);}
     async function editBranchAccess(id){openBranchForm(id);}
     async function deleteBranchAccess(id){const b=(window._branches||[]).find(x=>x._id===id);if(!b)return;if(!(await askConfirm('Delete Branch',`Delete ${b.name}? It can only be deleted after its students and collections are moved.`)) )return;try{const r=await branchApi('DELETE',{type:'branch',id}),d=await r.json();if(!r.ok)throw Error(d.error);await loadBranches();toast('Branch deleted');}catch(e){toast(e.message||'Delete failed');}}
     function askConfirm(title,text){return new Promise(resolve=>{document.getElementById('confirmTitle').textContent=title;document.getElementById('confirmText').textContent=text;const c=document.getElementById('confirmCheck'),y=document.getElementById('confirmYes');c.checked=false;y.disabled=true;document.getElementById('confirmModal').style.display='block';window._confirmResolve=resolve;c.onchange=()=>y.disabled=!c.checked;});}
