@@ -1,7 +1,8 @@
 const mongoose = require('mongoose');
 const crypto = require('crypto');
 const PASSWORD_KEYS = ["pageOpen","studentAdd","studentEdit","studentDelete","collectionAdd","collectionEdit","collectionDelete","excelExport","excelImport"];
-const DEFAULT_PERMISSIONS = Object.fromEntries(PASSWORD_KEYS.map(k=>[k,true]));
+const PERMISSION_KEYS = ["viewOnly", ...PASSWORD_KEYS];
+const DEFAULT_PERMISSIONS = Object.fromEntries(PERMISSION_KEYS.map(k=>[k,true]));
 const branchSchema = new mongoose.Schema({name:{type:String,required:true,unique:true,trim:true},code:{type:String,required:true,unique:true,trim:true,uppercase:true},active:{type:Boolean,default:true}},{timestamps:true});
 const userSchema = new mongoose.Schema({username:{type:String,required:true,unique:true,trim:true},passwordHash:{type:String,required:true},passwordEncrypted:{type:String,default:''},branchId:{type:mongoose.Schema.Types.ObjectId,ref:'Branch',required:true},role:{type:String,default:'branch_admin'},permissions:{type:Map,of:Boolean,default:{}}},{timestamps:true});
 const Branch=mongoose.models.Branch||mongoose.model('Branch',branchSchema);
@@ -98,7 +99,7 @@ async function handler(req,res){res.setHeader('Access-Control-Allow-Origin','*')
  }
  if(Object.prototype.hasOwnProperty.call(b,'permissions')){
    const nextPermissions={...DEFAULT_PERMISSIONS};
-   for(const key of PASSWORD_KEYS) nextPermissions[key]=b.permissions[key]!==false;
+   for(const key of PERMISSION_KEYS) nextPermissions[key]=b.permissions[key]!==false;
    user.permissions=new Map(Object.entries(nextPermissions));
  }
  await user.save();
@@ -106,4 +107,4 @@ async function handler(req,res){res.setHeader('Access-Control-Allow-Origin','*')
  if(req.method==='DELETE'){if(b.type==='branch'){const branch=await Branch.findById(b.id);if(!branch)return res.status(404).json({error:'Branch not found.'});const Student=mongoose.models.Student||mongoose.model('Student',new mongoose.Schema({branchId:{type:mongoose.Schema.Types.ObjectId,default:null}}));const History=mongoose.models.CollectionHistory||mongoose.model('CollectionHistory',new mongoose.Schema({branchId:{type:mongoose.Schema.Types.ObjectId,default:null}}));const students=await Student.countDocuments({branchId:b.id});const histories=await History.countDocuments({branchId:b.id});if(students||histories)return res.status(400).json({error:`Cannot delete ${branch.name}. It still has ${students} students and ${histories} collection entries. Move the data first.`});await BranchUser.deleteMany({branchId:b.id});await Branch.findByIdAndDelete(b.id);return res.json({ok:true});}await BranchUser.findByIdAndDelete(b.id);return res.json({ok:true});}
  return res.status(405).json({error:'Method not allowed'});
  }catch(e){console.error(e);return res.status(500).json({error:e.code===11000?'Branch code/name or username already exists.':e.message||'Server error'});}}
-module.exports=handler; module.exports.Branch=Branch; module.exports.BranchUser=BranchUser; module.exports.DEFAULT_PERMISSIONS=DEFAULT_PERMISSIONS; module.exports.PASSWORD_KEYS=PASSWORD_KEYS; module.exports.hashPw=hashPw; module.exports.checkPw=checkPw; module.exports.encPw=encPw; module.exports.sign=sign; module.exports.verifyToken=verifyToken; module.exports.db=db; module.exports.adminOk=adminOk; module.exports.mainAdmin=mainAdmin;
+module.exports=handler; module.exports.Branch=Branch; module.exports.BranchUser=BranchUser; module.exports.DEFAULT_PERMISSIONS=DEFAULT_PERMISSIONS; module.exports.PASSWORD_KEYS=PASSWORD_KEYS; module.exports.PERMISSION_KEYS=PERMISSION_KEYS; module.exports.hashPw=hashPw; module.exports.checkPw=checkPw; module.exports.encPw=encPw; module.exports.sign=sign; module.exports.verifyToken=verifyToken; module.exports.db=db; module.exports.adminOk=adminOk; module.exports.mainAdmin=mainAdmin;

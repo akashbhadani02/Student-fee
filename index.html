@@ -590,6 +590,21 @@
       margin: -4px 0 10px
     }
 
+    .permission-item { display:flex !important; gap:10px; align-items:center; padding:10px 12px; border:1px solid var(--line); border-radius:10px; background:#fff; cursor:pointer; min-height:54px; }
+    .permission-item input[type="checkbox"] { width:20px !important; height:20px; flex:0 0 auto; }
+    .permission-item span { display:flex; flex-direction:column; gap:2px; min-width:0; }
+    .permission-item small { color:var(--muted); font-size:11px; line-height:1.25; }
+    @media (max-width:700px){
+      #bfPermissions { grid-template-columns:1fr !important; gap:7px !important; }
+      .permission-item { min-height:52px; padding:9px 10px; }
+      .permission-item input[type="checkbox"] { width:22px !important; height:22px; }
+      .table-wrap { border-radius:10px; }
+      .table-wrap table { min-width:760px; }
+      #branchAccessBody td:last-child { white-space:normal; }
+      #branchAccessBody td:last-child button { margin:2px 0; }
+      #branchFormModal .panel { max-height:94vh; overflow-y:auto; }
+    }
+
     /* Mobile-first responsive improvements */
     html { -webkit-text-size-adjust: 100%; }
     body { min-width: 0; overflow-x: hidden; }
@@ -696,6 +711,7 @@
       collectionAdd: 'Collection Add', collectionEdit: 'Collection Edit', collectionDelete: 'Collection Delete',
       excelExport: 'Excel Export', excelImport: 'Excel Import'
     };
+    const PERMISSION_KEYS = { viewOnly: 'View Only', ...PASSWORD_KEYS };
 
     async function verifyPassword(key, password) {
       const res = await fetch("/api/auth", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "verify", key, password }) });
@@ -859,7 +875,7 @@
       <div class="panel" style="margin-bottom:18px">
         <div class="toolbar" style="margin:0">
           <button class="primary" onclick="exportXlsx()" data-permission="excelExport">⬇ Export All Data Excel</button>
-          <label class="file-label" style="cursor:pointer">
+          <label class="file-label" style="cursor:pointer" data-permission="excelImport">
             <span class="success"
               style="display:inline-block;padding:10px 14px;border-radius:10px;font-weight:700;cursor:pointer">⬆ Import
               Same Excel</span>
@@ -915,7 +931,7 @@
           </select>
           <button class="primary" onclick="addStudent()" data-permission="studentAdd">+ Add Student</button>
           <button class="secondary" onclick="exportXlsx()" data-permission="excelExport">Export Actual .xlsx</button>
-          <label class="file-label"><button class="success" type="button">Import .xlsx</button><input id="importFile"
+          <label class="file-label" data-permission="excelImport"><button class="success" type="button">Import .xlsx</button><input id="importFile"
               type="file" accept=".xlsx,.xls"></label>
         </div>
         <!-- <div class="hint" style="margin-bottom:12px">Excel export contains <b>all actual data in one editable All Data sheet</b>: students, branches, fees, paid amounts, collection history and formulas. Edit the exported file, save it as <b>.xlsx</b>, then import that same file to update the website.</div> -->
@@ -1156,7 +1172,7 @@
       const arr=state.students.filter(s=>(!q||String(s.name||'').toLowerCase().includes(q)||String(s.id||'').toLowerCase().includes(q)||String(s.mobile||'').toLowerCase().includes(q))&&(!bf||String(s.branchId||'')===bf||branchName(s.branch)===bf));
       document.getElementById("studentBody").innerHTML = arr.length ? arr.map(s => {
         const c = calc(s), st = status(s);
-        return `<tr><td>${s.id}</td><td>${esc(s.name)}</td><td>${esc(s.mobile || "")}</td><td><span class="branch-badge ${branchClass(s.branch)}">${branchName(s.branch)}</span></td><td class="num">${money(c.total)}</td><td class="num">${money(c.paid)}</td><td class="num">${money(c.p25)}</td><td class="num">${money(c.remaining)}</td><td><span class="badge ${st[1]}">${st[0]}</span></td><td><button class="payment-btn" onclick="openPayment('${s.id}')">Collect</button> <button class="receipt-btn" onclick="printReceipt('${s.id}')">Receipt</button> <button class="secondary" onclick="editStudent('${s.id}')">Edit</button> <button class="danger" onclick="deleteStudent('${s.id}')">Delete</button></td></tr>`;
+        return `<tr><td>${s.id}</td><td>${esc(s.name)}</td><td>${esc(s.mobile || "")}</td><td><span class="branch-badge ${branchClass(s.branch)}">${branchName(s.branch)}</span></td><td class="num">${money(c.total)}</td><td class="num">${money(c.paid)}</td><td class="num">${money(c.p25)}</td><td class="num">${money(c.remaining)}</td><td><span class="badge ${st[1]}">${st[0]}</span></td><td><button class="payment-btn" data-permission="collectionAdd" onclick="openPayment('${s.id}')">Collect</button> <button class="receipt-btn" onclick="printReceipt('${s.id}')">Receipt</button> <button class="secondary" data-permission="studentEdit" onclick="editStudent('${s.id}')">Edit</button> <button class="danger" data-permission="studentDelete" onclick="deleteStudent('${s.id}')">Delete</button></td></tr>`;
       }).join("") : `<tr><td colspan="10" class="empty">No students match the filter.</td></tr>`;
     }
     function renderHistory(){
@@ -1164,7 +1180,7 @@
       const bf=document.getElementById("historyBranchFilter")?.value||"";
       const rows=state.history.map((x,i)=>({x,i})).filter(({x})=>!bf||String(x.branchId||"")===bf||branchName(x.branchId)===bf||String(x.branch||"")===bf);
       wrap.querySelector("thead").innerHTML="<tr><th>Date</th><th>Branch</th><th>Collection</th><th>Action</th></tr>";
-      document.getElementById("historyBody").innerHTML=rows.length?rows.map(({x,i})=>`<tr><td>${esc(x.date)}</td><td><span class="branch-badge ${branchClass(x.branchId||x.branch)}">${esc(x.branch||branchName(x.branchId)||"Unassigned")}</span></td><td>${money(x.amount||0)}</td><td><button class="secondary" onclick="editHistory(${i})">Edit</button> <button class="danger" onclick="deleteHistory(${i})">Delete</button></td></tr>`).join(""): '<tr><td colspan="4" class="empty">No collection history.</td></tr>';
+      document.getElementById("historyBody").innerHTML=rows.length?rows.map(({x,i})=>`<tr><td>${esc(x.date)}</td><td><span class="branch-badge ${branchClass(x.branchId||x.branch)}">${esc(x.branch||branchName(x.branchId)||"Unassigned")}</span></td><td>${money(x.amount||0)}</td><td><button class="secondary" data-permission="collectionEdit" onclick="editHistory(${i})">Edit</button> <button class="danger" data-permission="collectionDelete" onclick="deleteHistory(${i})">Delete</button></td></tr>`).join(""): '<tr><td colspan="4" class="empty">No collection history.</td></tr>';
     }
     function renderExcelInfo() { document.getElementById("excelInfo").innerHTML = `<b>${state.students.length}</b> students &nbsp; • &nbsp; <b>${state.history.length}</b> collection entries &nbsp; • &nbsp; Database: <b>${dbReady ? "Connected" : "Not connected"}</b>`; }
     function esc(s) { return String(s ?? "").replace(/[&<>"']/g, m => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", "\"": "&quot;", "'": "&#039;" }[m])); }
@@ -1668,7 +1684,7 @@
     }
     window.logoutUser = logoutUser;
 
-    function applyAccessUI(){const branchOnly=!!BRANCH_TOKEN;document.querySelectorAll('.main-only').forEach(el=>el.style.display=branchOnly?'none':'');const bf=document.getElementById('branchFilter');if(branchOnly){bf.innerHTML='<option value="'+esc(ACCESS.branchId||'')+'">'+esc(ACCESS.branch||'My Branch')+'</option>';bf.disabled=true;}else{bf.disabled=false;}const title=document.querySelector('header h1');if(title)title.textContent=branchOnly?'Student Fee Management • '+(ACCESS.branch||'Branch'):'Student Fee Management';if(branchOnly){document.querySelectorAll('[data-permission]').forEach(el=>{const key=el.dataset.permission;if(ACCESS.permissions&&ACCESS.permissions[key]===false)el.style.display='none';});}else{document.querySelectorAll('[data-permission]').forEach(el=>el.style.display='');}}
+    function applyAccessUI(){const branchOnly=!!BRANCH_TOKEN;const readOnly=branchOnly&&ACCESS.permissions&&ACCESS.permissions.viewOnly===true;document.body.classList.toggle('branch-readonly',readOnly);document.querySelectorAll('.main-only').forEach(el=>el.style.display=branchOnly?'none':'');const bf=document.getElementById('branchFilter');if(branchOnly){bf.innerHTML='<option value="'+esc(ACCESS.branchId||'')+'">'+esc(ACCESS.branch||'My Branch')+'</option>';bf.disabled=true;}else{bf.disabled=false;}const title=document.querySelector('header h1');if(title)title.textContent=branchOnly?'Student Fee Management • '+(ACCESS.branch||'Branch')+(readOnly?' • View Only':''):'Student Fee Management';document.querySelectorAll('[data-permission]').forEach(el=>{if(!branchOnly){el.style.display='';return;}const key=el.dataset.permission;const denied=readOnly || (ACCESS.permissions&&ACCESS.permissions[key]===false);el.style.display=denied?'none':'';});if(branchOnly&&readOnly){document.querySelectorAll('#students input,#students select,#history input,#history select').forEach(el=>el.disabled=true);}}
     async function loadBranches(){
       if(BRANCH_TOKEN){
         window._branches = ACCESS.branchId ? [{_id:ACCESS.branchId,name:ACCESS.branch,code:ACCESS.code,active:true}] : [];
@@ -1695,10 +1711,10 @@
         window._branches=[...map.values()]; renderBranches(); syncBranchFilters(); renderAll(); console.warn('Branch load failed:',e);
       }
     }
-    function renderBranches(){const body=document.getElementById('branchAccessBody');if(!body)return;const users=window._branchUsers||[];body.innerHTML=(window._branches||[]).map(b=>{const u=users.find(x=>String(x.branchId?._id||x.branchId)===String(b._id));const pc=u?Object.values(u.permissions||{}).filter(Boolean).length:0;const login=u?`<div><b>ID: ${esc(u.username)}</b><br><span class="muted">Password: ${u.passwordAvailable?esc(u.password):'Password hidden — click Change ID / Password'}</span></div>`:'<span class="muted">No login</span>';return `<tr><td><b>${esc(b.name)}</b></td><td>${esc(b.code)}</td><td>${login}</td><td>${pc}/9</td><td>${b.active?'🟢 Active':'🔴 Inactive'}</td><td><button class="primary" onclick="changeBranchCredentials('${b._id}')">Change ID / Password</button> <button class="secondary" onclick="editBranchAccess('${b._id}')">Edit Branch</button> <button class="danger" onclick="deleteBranchAccess('${b._id}')">Delete</button></td></tr>`;}).join('')||'<tr><td colspan="6" class="empty">No branches</td></tr>';}
+    function renderBranches(){const body=document.getElementById('branchAccessBody');if(!body)return;const users=window._branchUsers||[];body.innerHTML=(window._branches||[]).map(b=>{const u=users.find(x=>String(x.branchId?._id||x.branchId)===String(b._id));const pc=u?Object.values(u.permissions||{}).filter(Boolean).length:0;const login=u?`<div><b>ID: ${esc(u.username)}</b><br><span class="muted">Password: ${u.passwordAvailable?esc(u.password):'Password hidden — click Change ID / Password'}</span></div>`:'<span class="muted">No login</span>';return `<tr><td><b>${esc(b.name)}</b></td><td>${esc(b.code)}</td><td>${login}</td><td>${pc}/10</td><td>${b.active?'🟢 Active':'🔴 Inactive'}</td><td><button class="primary" onclick="changeBranchCredentials('${b._id}')">Change ID / Password</button> <button class="secondary" onclick="editBranchAccess('${b._id}')">Edit Branch</button> <button class="danger" onclick="deleteBranchAccess('${b._id}')">Delete</button></td></tr>`;}).join('')||'<tr><td colspan="6" class="empty">No branches</td></tr>';}
     async function branchApi(method,body){return fetch('/api/branches',{method,headers:{'Content-Type':'application/json','X-Main-Admin':'true','X-Admin-Password':ADMIN_PASSWORDS.pageOpen,'X-Admin-Action':'pageOpen'},body:body?JSON.stringify(body):undefined});}
-    function permissionChecks(values={}){return Object.entries(PASSWORD_KEYS).map(([k,label])=>`<label style="display:flex;gap:8px;align-items:center;padding:8px;border:1px solid var(--line);border-radius:8px"><input type="checkbox" data-perm="${k}" ${values[k]!==false?'checked':''} style="width:auto">${esc(label)}</label>`).join('');}
-    function openBranchForm(id=null){const b=id?(window._branches||[]).find(x=>x._id===id):null,u=id?(window._branchUsers||[]).find(x=>String(x.branchId?._id||x.branchId)===id):null;window._editingBranchId=id;document.getElementById('branchFormTitle').textContent=id?'🔐 Edit Branch Login / Access':'🏢 Add Branch';document.getElementById('bfName').value=b?.name||'';document.getElementById('bfCode').value=b?.code||'';document.getElementById('bfUsername').value=(u?.username||'').toLowerCase();document.getElementById('bfPassword').value=u?.password||'';document.getElementById('bfPassword').dataset.passwordVisible='false';document.getElementById('bfPassword').type='password';document.getElementById('bfActive').checked=b?.active!==false;document.getElementById('bfPermissions').innerHTML=permissionChecks(u?.permissions||{});document.getElementById('branchFormError').style.display='none';document.getElementById('branchFormModal').style.display='block';}
+    function permissionChecks(values={}){return Object.entries(PERMISSION_KEYS).map(([k,label])=>{const checked=values[k]!==false;const hint=k==='viewOnly'?'Only view data; all branch updates are blocked.':'Allow this action';return `<label class="permission-item" title="${esc(hint)}"><input type="checkbox" data-perm="${k}" ${checked?'checked':''}><span><b>${esc(label)}</b><small>${esc(hint)}</small></span></label>`;}).join('');}
+    function openBranchForm(id=null){const b=id?(window._branches||[]).find(x=>x._id===id):null,u=id?(window._branchUsers||[]).find(x=>String(x.branchId?._id||x.branchId)===id):null;window._editingBranchId=id;document.getElementById('branchFormTitle').textContent=id?'🔐 Edit Branch Login / Access':'🏢 Add Branch';document.getElementById('bfName').value=b?.name||'';document.getElementById('bfCode').value=b?.code||'';document.getElementById('bfUsername').value=(u?.username||'').toLowerCase();document.getElementById('bfPassword').value=u?.password||'';document.getElementById('bfPassword').dataset.passwordVisible='false';document.getElementById('bfPassword').type='password';document.getElementById('bfActive').checked=b?.active!==false;document.getElementById('bfPermissions').innerHTML=permissionChecks(u?.permissions||{});const vo=document.querySelector('#bfPermissions [data-perm=\"viewOnly\"]');if(vo){vo.addEventListener('change',()=>{if(vo.checked)document.querySelectorAll('#bfPermissions [data-perm]:not([data-perm=\"viewOnly\"])').forEach(x=>x.checked=false);});}document.getElementById('branchFormError').style.display='none';document.getElementById('branchFormModal').style.display='block';}
     function closeBranchForm(){document.getElementById('branchFormModal').style.display='none';window._editingBranchId=null;}
     async function saveBranchForm(){
       const err=document.getElementById('branchFormError'),editingId=window._editingBranchId;
@@ -1709,7 +1725,7 @@
       if(!editingId&&password.length<4){err.textContent='Password is required for a new branch (minimum 4 characters).';err.style.display='block';return;}
       if(editingId&&!existingUser&&!password){err.textContent='This branch has no saved login yet. Enter a password to create its login.';err.style.display='block';return;}
       if(editingId&&password&&password.length<4){err.textContent='If changing the password, use at least 4 characters. Leave it blank to keep the existing password.';err.style.display='block';return;}
-      const permissions={};document.querySelectorAll('#bfPermissions [data-perm]').forEach(x=>permissions[x.dataset.perm]=x.checked);
+      const permissions={};document.querySelectorAll('#bfPermissions [data-perm]').forEach(x=>permissions[x.dataset.perm]=x.checked);if(permissions.viewOnly===true){Object.keys(permissions).forEach(k=>{if(k!=='viewOnly')permissions[k]=false;});}
       try{
         let r,d;
         if(editingId){
