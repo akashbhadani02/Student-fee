@@ -1,19 +1,55 @@
 const mongoose = require('mongoose');
 const crypto = require('crypto');
-const {Branch,BranchUser,checkPw,sign,db,encPw}=require('./branches');
+const {Branch,BranchUser,checkPw,sign,db,encPw,decPw}=require('./branches');
 const PASSWORD_KEYS=["pageOpen","studentAdd","studentEdit","studentDelete","collectionAdd","collectionEdit","collectionDelete","excelExport","excelImport"];
 const DEFAULT_PASSWORD=process.env.ADMIN_PASSWORD||'1316618'; const MASTER_PASSWORD=process.env.PASSWORD_SETTINGS_MASTER||'Deoxy';
-const adminSchema=new mongoose.Schema({key:{type:String,unique:true,default:'main'},passwordHashes:{type:Map,of:String,default:{}},passwordHash:String},{timestamps:true});
+const adminSchema=new mongoose.Schema({key:{type:String,unique:true,default:'main'},passwordHashes:{type:Map,of:String,default:{}},passwordHash:String,passwordEncrypted: {type:Map,of:String,default:{}},passwordHistory:[{actionKey:String,actionLabel:String,oldPasswordEncrypted:String,newPasswordEncrypted:String,changedAt:{type:Date,default:Date.now}}]},{timestamps:true});
 const AdminSettings=mongoose.models.AdminSettings||mongoose.model('AdminSettings',adminSchema);
 function sha(v){return crypto.createHash('sha256').update(String(v)).digest('hex');}
-async function getAdmin(){let a=await AdminSettings.findOne({key:'main'});if(!a){const h=sha(DEFAULT_PASSWORD),o={};PASSWORD_KEYS.forEach(k=>o[k]=h);return AdminSettings.create({key:'main',passwordHash:h,passwordHashes:o});}let ch=false,legacy=a.passwordHash||sha(DEFAULT_PASSWORD);
-// Local development: if ADMIN_PASSWORD is explicitly set, sync the stored admin password to it. Production is never auto-reset.
-if(process.env.NODE_ENV !== 'production' && process.env.ADMIN_PASSWORD){const h=sha(DEFAULT_PASSWORD);for(const k of PASSWORD_KEYS)if(a.passwordHashes?.get(k)!==h){a.passwordHashes.set(k,h);ch=true;}a.passwordHash=h;legacy=h;}if(!a.passwordHashes||a.passwordHashes.size===0){const o={};PASSWORD_KEYS.forEach(k=>o[k]=legacy);a.passwordHashes=o;ch=true;}else for(const k of PASSWORD_KEYS)if(!a.passwordHashes.get(k)){a.passwordHashes.set(k,legacy);ch=true;}if(ch)await a.save();return a;}
-async function verifyKey(k,p){if(!PASSWORD_KEYS.includes(k))return false;const a=await getAdmin();return a.passwordHashes.get(k)===sha(p);}
+async function getAdmin(){
+  let a=await AdminSettings.findOne({key:'main'});
+  if(!a){
+    const h=sha(DEFAULT_PASSWORD), o={};
+    PASSWORD_KEYS.forEach(k=>o[k]=h);
+    return AdminSettings.create({key:'main',passwordHash:h,passwordHashes:o});
+  }
+  let ch=false, legacy=a.passwordHash||sha(DEFAULT_PASSWORD);
+  // IMPORTANT: Never overwrite saved action passwords from .env on every request.
+  // The values saved through Password Change must remain persistent in MongoDB.
+  if(!a.passwordHashes || a.passwordHashes.size===0){
+    const o={}; PASSWORD_KEYS.forEach(k=>o[k]=legacy); a.passwordHashes=o; ch=true;
+  } else {
+    for(const k of PASSWORD_KEYS) if(!a.passwordHashes.get(k)){a.passwordHashes.set(k,legacy); ch=true;}
+  }
+  if(ch) await a.save();
+  return a;
+}
+async function verifyKey(k,p){if(!PASSWORD_KEYS.includes(k))return false;const a=await getAdmin();const supplied=String(p||'');if(!supplied)return false;const keyHash=a.passwordHashes?.get(k)||'';const mainHash=a.passwordHash||'';return (keyHash&&keyHash===sha(supplied)) || (mainHash&&mainHash===sha(supplied));}
 module.exports=async(req,res)=>{res.setHeader('Access-Control-Allow-Origin','*');res.setHeader('Access-Control-Allow-Methods','POST,OPTIONS');res.setHeader('Access-Control-Allow-Headers','Content-Type,Authorization');res.setHeader('Cache-Control','no-store');if(req.method==='OPTIONS')return res.status(204).end();try{await db();if(req.method!=='POST')return res.status(405).json({error:'Method not allowed'});const b=req.body||{};
 if(b.action==='verify'){const ok=await verifyKey(String(b.key||''),String(b.password||''));return res.status(ok?200:403).json({ok});}
 if(b.action==='master'){const ok=String(b.masterPassword||'')===MASTER_PASSWORD;return res.status(ok?200:403).json({ok});}
-if(b.action==='changeSettings'){if(String(b.masterPassword||'')!==MASTER_PASSWORD)return res.status(403).json({error:'Wrong master password.'});const a=await getAdmin(),ps=b.passwords||{};for(const k of PASSWORD_KEYS)if(Object.prototype.hasOwnProperty.call(ps,k)){const v=String(ps[k]||'');if(v.length<4)return res.status(400).json({error:k+' password must be at least 4 characters.'});a.passwordHashes.set(k,sha(v));}await a.save();return res.json({ok:true});}
+if(b.action==='passwordHistory'){if(String(b.masterPassword||'')!==MASTER_PASSWORD)return res.status(403).json({error:'Wrong master password.'});const a=await getAdmin();const history=(a.passwordHistory||[]).slice().sort((x,y)=>new Date(y.changedAt)-new Date(x.changedAt)).map(x=>({actionKey:x.actionKey,actionLabel:x.actionLabel,oldPassword:x.oldPasswordEncrypted?decPw(x.oldPasswordEncrypted):'',newPassword:x.newPasswordEncrypted?decPw(x.newPasswordEncrypted):'',changedAt:x.changedAt}));return res.json({ok:true,history});}
+if(b.action==='changeSettings'){
+  if(String(b.masterPassword||'')!==MASTER_PASSWORD)return res.status(403).json({error:'Wrong master password.'});
+  const a=await getAdmin(),ps=b.passwords||{};
+  // Existing AdminSettings documents may have been created before the Map fields
+  // were added. Always initialise the maps before calling .set().
+  if(!a.passwordHashes || typeof a.passwordHashes.set!=='function') a.passwordHashes=new Map();
+  if(!a.passwordEncrypted || typeof a.passwordEncrypted.set!=='function') a.passwordEncrypted=new Map();
+  if(!Array.isArray(a.passwordHistory)) a.passwordHistory=[];
+  for(const k of PASSWORD_KEYS){
+    if(!Object.prototype.hasOwnProperty.call(ps,k)) continue;
+    const v=String(ps[k]||'');
+    if(v.length<4)return res.status(400).json({error:k+' password must be at least 4 characters.'});
+    const oldPassword=a.passwordEncrypted.get(k)||'';
+    a.passwordHistory.push({actionKey:k,actionLabel:k,oldPasswordEncrypted:oldPassword?encPw(oldPassword):'',newPasswordEncrypted:encPw(v),changedAt:new Date()});
+    a.passwordHashes.set(k,sha(v));
+    a.passwordEncrypted.set(k,encPw(v));
+  }
+  if(a.passwordHistory.length>200)a.passwordHistory=a.passwordHistory.slice(-200);
+  await a.save();
+  return res.json({ok:true});
+}
 if(b.action==='branchLogin'){const username=String(b.username||'').trim().toLowerCase(),password=String(b.password||''),requestedBranchId=String(b.branchId||'').trim();if(!username||!password||!requestedBranchId)return res.status(400).json({ok:false,error:'Branch, username and password are required.'});if(!mongoose.isValidObjectId(requestedBranchId))return res.status(400).json({ok:false,error:'Invalid branch selected.'});let branch=null;
 if(mongoose.isValidObjectId(requestedBranchId)) branch=await Branch.findOne({_id:requestedBranchId,active:true}).lean();
 if(!branch){const q=requestedBranchId.trim();branch=await Branch.findOne({active:true,$or:[{code:q.toUpperCase()},{name:q},{name:new RegExp('^'+q.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')+'$','i')}]}).lean();}

@@ -10,23 +10,30 @@ function sha(v){return crypto.createHash('sha256').update(String(v)).digest('hex
 async function adminOk(req,key){const a=await AdminSettings.findOne({key:'main'});return !!a&&!!a.passwordHashes?.get(key)&&a.passwordHashes.get(key)===sha(String(req.headers['x-admin-password']||''));}
 function auth(req){return verifyToken(String(req.headers.authorization||'').replace(/^Bearer\s+/i,''));}
 function perm(a,key){return a?.type==='branch' && a.permissions?.[key]!==false;}
+let bootstrapPromise=null;
 async function bootstrapData(){
-  const branches=await Branch.find({active:true}).sort({name:1}).lean();
-  const byName=new Map(branches.map(b=>[String(b.name).trim().toLowerCase(),b]));
-  if(await Student.countDocuments()===0){
-    const seed=require('../seed-data.json');
-    if(Array.isArray(seed.students)&&seed.students.length){
-      const rows=seed.students.map(s=>{const b=byName.get(String(s.branch||'').trim().toLowerCase());return {id:String(s.id),name:String(s.name||'').trim(),mobile:String(s.mobile||'').trim(),branch:b?.name||String(s.branch||'').trim(),branchId:b?._id||null,totalFee:s.totalFee==null?null:Number(s.totalFee),paidFee:s.paidFee==null?null:Number(s.paidFee)};}).filter(s=>s.id&&s.name);
-      if(rows.length)try{await Student.insertMany(rows,{ordered:false});}catch(e){}
+  if(bootstrapPromise) return bootstrapPromise;
+  bootstrapPromise=(async()=>{
+    const branches=await Branch.find({active:true}).sort({name:1}).lean();
+    const byName=new Map(branches.map(b=>[String(b.name).trim().toLowerCase(),b]));
+    if(await Student.countDocuments()===0){
+      const seed=require('../seed-data.json');
+      if(Array.isArray(seed.students)&&seed.students.length){
+        const rows=seed.students.map(s=>{const b=byName.get(String(s.branch||'').trim().toLowerCase());return {id:String(s.id),name:String(s.name||'').trim(),mobile:String(s.mobile||'').trim(),branch:b?.name||String(s.branch||'').trim(),branchId:b?._id||null,totalFee:s.totalFee==null?null:Number(s.totalFee),paidFee:s.paidFee==null?null:Number(s.paidFee)};}).filter(s=>s.id&&s.name);
+        if(rows.length)try{await Student.insertMany(rows,{ordered:false});}catch(e){}
+      }
     }
-  }
-  for(const b of branches)await Student.updateMany({branch:b.name,$or:[{branchId:null},{branchId:{$exists:false}}]},{$set:{branchId:b._id}});
-  if(await CollectionHistory.countDocuments()===0){
-    const seed=require('../seed-data.json'); const rows=[];
-    for(const h of (seed.history||[])) for(const [name,val] of [['Velanja',h.velanja],['Mota Varachha',h.mota],['Mission Road',h.mission]]){const n=Number(val||0),b=byName.get(name.toLowerCase());if(n&&b)rows.push({date:String(h.date),branch:b.name,branchId:b._id,amount:n,velanja:null,mota:null,mission:null});}
-    if(rows.length)try{await CollectionHistory.insertMany(rows,{ordered:false});}catch(e){}
-  }
+    if(await CollectionHistory.countDocuments()===0){
+      const seed=require('../seed-data.json'); const rows=[];
+      for(const h of (seed.history||[])) for(const [name,val] of [['Velanja',h.velanja],['Mota Varachha',h.mota],['Mission Road',h.mission]]){const n=Number(val||0),b=byName.get(name.toLowerCase());if(n&&b)rows.push({date:String(h.date),branch:b.name,branchId:b._id,amount:n,velanja:null,mota:null,mission:null});}
+      if(rows.length)try{await CollectionHistory.insertMany(rows,{ordered:false});}catch(e){}
+    }
+    // Backfill branchId only once per process; this is the expensive migration step.
+    for(const b of branches) await Student.updateMany({branch:b.name,$or:[{branchId:null},{branchId:{$exists:false}}]},{$set:{branchId:b._id}});
+  })().catch(e=>{bootstrapPromise=null; throw e;});
+  return bootstrapPromise;
 }
+
 function normS(s){return {id:String(s.id||''),name:String(s.name||'').trim(),mobile:String(s.mobile||'').trim(),branch:String(s.branch||''),branchId:s.branchId||null,totalFee:s.totalFee==null||s.totalFee===''?null:Number(s.totalFee),paidFee:s.paidFee==null||s.paidFee===''?null:Number(s.paidFee),payments:Array.isArray(s.payments)?s.payments.map(p=>({amount:Number(p.amount||0),date:String(p.date||''),method:String(p.method||'Cash'),note:String(p.note||''),createdAt:p.createdAt||new Date()})).filter(p=>p.amount>0&&p.date):[]};}
 function normH(h){return {date:String(h.date||''),velanja:h.velanja==null||h.velanja===''?null:Number(h.velanja),mota:h.mota==null||h.mota===''?null:Number(h.mota),mission:h.mission==null||h.mission===''?null:Number(h.mission),branch:String(h.branch||''),branchId:h.branchId||null,amount:h.amount==null||h.amount===''?null:Number(h.amount)};}
 module.exports=async(req,res)=>{res.setHeader('Access-Control-Allow-Origin','*');res.setHeader('Access-Control-Allow-Methods','GET,PUT,OPTIONS');res.setHeader('Access-Control-Allow-Headers','Content-Type,Authorization,X-Admin-Password,X-Admin-Action,X-Main-Admin');res.setHeader('Cache-Control','no-store');if(req.method==='OPTIONS')return res.status(204).end();try{await db();await bootstrapData();const a=auth(req),main=String(req.headers['x-main-admin']||'')==='true';
