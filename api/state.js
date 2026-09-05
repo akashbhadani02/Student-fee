@@ -10,7 +10,7 @@ const historySchema=new mongoose.Schema({date:String,velanja:Number,mota:Number,
 const payoutSchema=new mongoose.Schema({date:String,branch:String,branchId:{type:mongoose.Schema.Types.ObjectId,ref:'Branch',default:null},amount:Number,note:String},{timestamps:true});
 const Student=mongoose.models.Student||mongoose.model('Student',studentSchema);const CollectionHistory=mongoose.models.CollectionHistory||mongoose.model('CollectionHistory',historySchema);const CommissionPayout=mongoose.models.CommissionPayout||mongoose.model('CommissionPayout',payoutSchema);const AdminSettings=mongoose.models.AdminSettings||mongoose.model('AdminSettings',adminSchema);
 function sha(v){return crypto.createHash('sha256').update(String(v)).digest('hex');}
-async function adminOk(req,key){const a=await AdminSettings.findOne({key:'main'});return !!a&&!!a.passwordHashes?.get(key)&&a.passwordHashes.get(key)===sha(String(req.headers['x-admin-password']||''));}
+async function adminOk(req,key){const a=await AdminSettings.findOne({key:'main'});if(!a)return false;const p=String(req.headers['x-admin-password']||'');if(!p)return false;const isMain=String(req.headers['x-main-admin']||'')==='true';/* Main admin is already authenticated at login; use the main login password for all admin actions. Branch admins still use action-specific approval passwords. */const hash=isMain?(a.passwordHashes?.get('pageOpen')||a.passwordHash):a.passwordHashes?.get(key);return !!hash&&hash===sha(p);}
 function auth(req){return verifyToken(String(req.headers.authorization||'').replace(/^Bearer\s+/i,''));}
 function perm(a,key){return a?.type==='branch' && a.permissions?.[key]!==false;}
 async function bootstrapData(){
