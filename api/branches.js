@@ -16,19 +16,25 @@ function decPw(v){try{const key=crypto.createHash('sha256').update(process.env.B
 const SECRET=process.env.BRANCH_AUTH_SECRET||process.env.MONGODB_URI||'change-this-secret';
 function sign(payload){const raw=Buffer.from(JSON.stringify(payload)).toString('base64url');const sig=crypto.createHmac('sha256',SECRET).update(raw).digest('base64url');return raw+'.'+sig;}
 function verifyToken(token){try{const [raw,sig]=String(token||'').split('.');if(!raw||!sig)return null;const expected=crypto.createHmac('sha256',SECRET).update(raw).digest('base64url');if(!crypto.timingSafeEqual(Buffer.from(sig),Buffer.from(expected)))return null;const p=JSON.parse(Buffer.from(raw,'base64url').toString());if(!p.exp||Date.now()>p.exp)return null;return p;}catch(e){return null;}}
+let dbInitPromise=null;
 async function db(){
   if(!process.env.MONGODB_URI)throw Error('MONGODB_URI environment variable is missing.');
   if(!global.__feesDb)global.__feesDb=mongoose.connect(process.env.MONGODB_URI,{serverSelectionTimeoutMS:10000});
   await global.__feesDb;
-  const seeds=[['Velanja','VELANJ'],['Mota Varachha','MOTAVA'],['Mission Road','MISSION']];
-  for(const [name,code] of seeds){
-    let b=await Branch.findOne({name});
-    if(!b){try{b=await Branch.create({name,code,active:true});}catch(e){b=await Branch.findOne({name});}}
-    if(!b)continue;
-    let u=await BranchUser.findOne({branchId:b._id});
-    if(!u){const pw=code+'@2026';try{await BranchUser.create({username:code.toLowerCase()+'_admin',passwordHash:hashPw(pw),passwordEncrypted:encPw(pw),branchId:b._id,permissions:DEFAULT_PERMISSIONS});}catch(e){}}
-    else{let changed=false;if(!u.passwordEncrypted){const pw=code+'@2026';u.passwordHash=hashPw(pw);u.passwordEncrypted=encPw(pw);changed=true;}if(!u.permissions||u.permissions.size===0){u.permissions=DEFAULT_PERMISSIONS;changed=true;}if(changed)await u.save();}
+  if(!dbInitPromise){
+    dbInitPromise=(async()=>{
+      const seeds=[['Velanja','VELANJ'],['Mota Varachha','MOTAVA'],['Mission Road','MISSION']];
+      for(const [name,code] of seeds){
+        let b=await Branch.findOne({name});
+        if(!b){try{b=await Branch.create({name,code,active:true});}catch(e){b=await Branch.findOne({name});}}
+        if(!b)continue;
+        let u=await BranchUser.findOne({branchId:b._id});
+        if(!u){const pw=code+'@2026';try{await BranchUser.create({username:code.toLowerCase()+'_admin',passwordHash:hashPw(pw),passwordEncrypted:encPw(pw),branchId:b._id,permissions:DEFAULT_PERMISSIONS});}catch(e){}}
+        else{let changed=false;if(!u.passwordEncrypted){const pw=code+'@2026';u.passwordHash=hashPw(pw);u.passwordEncrypted=encPw(pw);changed=true;}if(!u.permissions||u.permissions.size===0){u.permissions=DEFAULT_PERMISSIONS;changed=true;}if(changed)await u.save();}
+      }
+    })().catch(e=>{dbInitPromise=null;throw e;});
   }
+  await dbInitPromise;
   return global.__feesDb;
 }
 async function adminOk(req){const p=String(req.headers['x-admin-password']||'');if(!p)return false;const a=await AdminSettings.findOne({key:'main'});if(!a)return false;const key=String(req.headers['x-admin-action']||'pageOpen');return !!a.passwordHashes?.get(key) && a.passwordHashes.get(key)===sha(p);}
