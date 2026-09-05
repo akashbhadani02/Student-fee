@@ -1,0 +1,63 @@
+const mongoose = require("mongoose");
+const crypto = require("crypto");
+
+const adminSchema = new mongoose.Schema({
+  key: { type: String, unique: true, default: "main" },
+  passwordHash: { type: String, required: true }
+}, { timestamps: true });
+
+const AdminSettings = mongoose.models.AdminSettings || mongoose.model("AdminSettings", adminSchema);
+
+let connectionPromise;
+async function connectDB(){
+  if(!process.env.MONGODB_URI) throw new Error("MONGODB_URI environment variable is missing.");
+  if(!connectionPromise) connectionPromise = mongoose.connect(process.env.MONGODB_URI, { serverSelectionTimeoutMS: 10000 });
+  return connectionPromise;
+}
+function hashPassword(password){
+  return crypto.createHash("sha256").update(String(password)).digest("hex");
+}
+async function getAdmin(){
+  let admin = await AdminSettings.findOne({key:"main"});
+  if(!admin){
+    const initial = process.env.ADMIN_PASSWORD || "1316618";
+    admin = await AdminSettings.create({key:"main", passwordHash:hashPassword(initial)});
+  }
+  return admin;
+}
+async function verifyPassword(password){
+  const admin = await getAdmin();
+  return admin.passwordHash === hashPassword(password);
+}
+
+module.exports = async (req,res)=>{
+  res.setHeader("Access-Control-Allow-Origin","*");
+  res.setHeader("Access-Control-Allow-Methods","POST,OPTIONS");
+  res.setHeader("Access-Control-Allow-Headers","Content-Type");
+  res.setHeader("Cache-Control","no-store, no-cache, must-revalidate, max-age=0");
+  if(req.method==="OPTIONS") return res.status(204).end();
+  try{
+    await connectDB();
+    const body=req.body||{};
+    if(req.method!=="POST") return res.status(405).json({error:"Method not allowed"});
+
+    if(body.action==="login"){
+      const ok=await verifyPassword(body.password||"");
+      return res.status(ok?200:403).json(ok?{ok:true}:{ok:false,error:"Wrong password."});
+    }
+
+    if(body.action==="change"){
+      const current=String(body.currentPassword||"");
+      const next=String(body.newPassword||"");
+      if(next.length < 6) return res.status(400).json({error:"New password must be at least 6 characters."});
+      if(!(await verifyPassword(current))) return res.status(403).json({error:"Current password is wrong."});
+      await AdminSettings.updateOne({key:"main"}, {$set:{passwordHash:hashPassword(next)}}, {upsert:true});
+      return res.json({ok:true});
+    }
+
+    return res.status(400).json({error:"Invalid action."});
+  }catch(e){
+    console.error(e);
+    return res.status(500).json({error:e.message||"Server error"});
+  }
+};

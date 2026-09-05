@@ -1,0 +1,98 @@
+const mongoose = require('mongoose');
+const crypto = require('crypto');
+
+const adminSchema = new mongoose.Schema({
+  key: { type: String, unique: true, default: 'main' },
+  passwordHash: { type: String, required: true }
+}, { timestamps: true });
+const AdminSettings = mongoose.models.AdminSettings || mongoose.model('AdminSettings', adminSchema);
+function hashPassword(password){ return crypto.createHash('sha256').update(String(password)).digest('hex'); }
+async function verifyAdminPassword(password){
+  let admin = await AdminSettings.findOne({key:'main'});
+  if(!admin){
+    const initial = process.env.ADMIN_PASSWORD || '1316618';
+    admin = await AdminSettings.create({key:'main', passwordHash:hashPassword(initial)});
+  }
+  return admin.passwordHash === hashPassword(password);
+}
+
+const studentSchema = new mongoose.Schema({
+  id: { type: String, unique: true, required: true },
+  name: { type: String, required: true, trim: true },
+  mobile: { type: String, default: '' },
+  branch: { type: String, default: '' },
+  totalFee: { type: Number, default: null },
+  paidFee: { type: Number, default: null }
+}, { timestamps: true });
+
+const historySchema = new mongoose.Schema({
+  date: { type: String, required: true },
+  velanja: { type: Number, default: null },
+  mota: { type: Number, default: null },
+  mission: { type: Number, default: null }
+}, { timestamps: true });
+
+const Student = mongoose.models.Student || mongoose.model('Student', studentSchema);
+const CollectionHistory = mongoose.models.CollectionHistory || mongoose.model('CollectionHistory', historySchema);
+
+let connectionPromise;
+async function connectDB(){
+  if(!process.env.MONGODB_URI) throw new Error('MONGODB_URI environment variable is missing.');
+  if(!connectionPromise) connectionPromise = mongoose.connect(process.env.MONGODB_URI, { serverSelectionTimeoutMS: 10000 });
+  return connectionPromise;
+}
+
+function normalizeStudent(s){ return {
+  id:String(s.id), name:String(s.name||'').trim(), mobile:String(s.mobile||'').trim(), branch:String(s.branch||''),
+  totalFee:s.totalFee==null||s.totalFee===''?null:Number(s.totalFee),
+  paidFee:s.paidFee==null||s.paidFee===''?null:Number(s.paidFee)
+}; }
+function normalizeHistory(h){ return {
+  date:String(h.date||''), velanja:h.velanja==null||h.velanja===''?null:Number(h.velanja),
+  mota:h.mota==null||h.mota===''?null:Number(h.mota), mission:h.mission==null||h.mission===''?null:Number(h.mission)
+}; }
+async function seedIfEmpty(){
+  const [sc,hc]=await Promise.all([Student.countDocuments(),CollectionHistory.countDocuments()]);
+  if(sc||hc) return;
+  // Seed only when the database is completely empty, preserving existing data.
+  const seed=require('../seed-data.json');
+  if(seed.students?.length) await Student.insertMany(seed.students.map(normalizeStudent));
+  if(seed.history?.length) await CollectionHistory.insertMany(seed.history.map(normalizeHistory));
+}
+
+async function getState(){
+  const [students,history]=await Promise.all([
+    Student.find().sort({id:1}).lean(), CollectionHistory.find().sort({date:1,_id:1}).lean()
+  ]);
+  return {students,history};
+}
+
+module.exports = async (req,res)=>{
+  res.setHeader('Access-Control-Allow-Origin','*');
+  res.setHeader('Access-Control-Allow-Methods','GET,PUT,OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers','Content-Type, If-None-Match');
+  res.setHeader('Cache-Control','no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0, s-maxage=0');
+  res.setHeader('Pragma','no-cache'); res.setHeader('Expires','0'); res.setHeader('Surrogate-Control','no-store');
+  if(req.method==='OPTIONS') return res.status(204).end();
+  try{
+    await connectDB();
+    await seedIfEmpty();
+    if(req.method==='GET') return res.status(200).json(await getState());
+    if(req.method!=='PUT') return res.status(405).json({error:'Method not allowed'});
+    if(!(await verifyAdminPassword(req.headers['x-admin-password'] || ''))) return res.status(403).json({error:'Wrong password.'});
+    const body=req.body||{};
+    if(!Array.isArray(body.students)||!Array.isArray(body.history)) return res.status(400).json({error:'students and history must be arrays'});
+    const students=body.students.map(normalizeStudent).filter(s=>s.id && s.name);
+    const history=body.history.map(normalizeHistory).filter(h=>h.date);
+    // Upsert the submitted records and remove records deleted by the user.
+    const studentIds=students.map(s=>s.id);
+    const studentOps=students.map(s=>({updateOne:{filter:{id:s.id},update:{$set:s},upsert:true}}));
+    if(studentOps.length) await Student.bulkWrite(studentOps,{ordered:false});
+    await Student.deleteMany({id:{$nin:studentIds}});
+    // History has no stable client id in the UI, so replace it atomically enough for this small dataset.
+    // Do it only after student upserts so a student save cannot erase history.
+    await CollectionHistory.deleteMany({});
+    if(history.length) await CollectionHistory.insertMany(history,{ordered:false});
+    return res.status(200).json(await getState());
+  }catch(e){ console.error(e); return res.status(500).json({error:e.message||'Server error'}); }
+};

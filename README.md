@@ -1,23 +1,31 @@
-# Student Fee Management – Updated
+# Spoken English Course Manager — New Project
 
-This version keeps the existing MongoDB/branch architecture and adds a proper per-student fee collection workflow.
+This is a fresh packaged copy of the project with the existing UI/backend structure
+and the existing student seed data preserved.
 
-## Main improvements
-- Per-student payment collection with date, amount, method and note.
-- Automatic update of Paid Fee and Remaining Fee.
-- Payment history inside each student's collection window.
-- Printable fee receipt for the latest payment/student balance.
-- Existing branch-based access control is preserved.
-- Existing admin action-password and branch permissions are preserved.
-- Existing Excel import/export remains compatible.
-- MongoDB stores payment history with each student.
-- Existing students and their paid-fee values remain backward compatible.
+- Existing student records preserved: 99 students
+- Existing fee/payment/history seed data preserved
+- MongoDB backend included
+- Admin + branch-user access included
+- 25% commission logic remains part of the application
+- `.env` is intentionally NOT included; use `.env.example`
+- For Vercel, add the environment variables in Project Settings
 
-## Run
-1. Install Node.js 18+.
-2. Run `npm install`.
-3. Create `.env` with `MONGODB_URI` and the required admin/secret values.
-4. Run `npm start`.
-5. Open the shown local URL.
+## Local setup
 
-The app still uses the existing `seed-data.json` only when the database has no student records.
+1. Install Node.js.
+2. Run `npm install`
+3. Copy `.env.example` to `.env`
+4. Put your MongoDB connection string in `MONGODB_URI`
+5. Run `npm start`
+6. Open the local URL shown by the server.
+
+## Important
+
+Do not commit `.env` to GitHub. Use Vercel Environment Variables for deployment.
+The seed data is kept so the 99 existing students can be restored when the target
+MongoDB database is empty.
+
+
+## Redesigned UI
+A new professional responsive dashboard groups all 99 seed students by Velanja, Mota Varachha and Mission Road while keeping the MongoDB backend and seed data.

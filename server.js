@@ -1,28 +1,12 @@
 require('dotenv').config();
 const express=require('express'),path=require('path'),cors=require('cors'),mongoose=require('mongoose');
 const app=express(),PORT=process.env.PORT||3000;app.use(cors());app.use(express.json({limit:'4mb'}));app.use('/api',(req,res,next)=>{res.setHeader('Cache-Control','no-store, no-cache, must-revalidate, proxy-revalidate');res.setHeader('Pragma','no-cache');res.setHeader('Expires','0');next();});app.use(express.static(__dirname));
-const auth=require('./api/auth'),state=require('./api/state'),branches=require('./api/branches'),publicBranches=require('./api/public-branches');
-// Public endpoint used by the Branch Login screen. This must be registered explicitly
-// in local Express mode; otherwise the dropdown receives a 404 and shows "Unable to load branches".
-app.all('/api/auth',auth);
-app.all('/api/state',state);
-app.all('/api/branches',branches);
-app.all('/api/public-branches',publicBranches);
-app.get('/api/health',(req,res)=>res.json({ok:true,mongodb:mongoose.connection.readyState===1}));app.use((req,res)=>req.method==='GET'&&!req.path.startsWith('/api/')?res.sendFile(path.join(__dirname,'index.html')):res.status(404).json({error:'Not found'}));
+const auth=require('./api/auth'),state=require('./api/state'),branches=require('./api/branches');app.all('/api/auth',auth);app.all('/api/state',state);app.all('/api/branches',branches);app.get('/api/health',(req,res)=>res.json({ok:true,mongodb:mongoose.connection.readyState===1}));app.use((req,res)=>req.method==='GET'&&!req.path.startsWith('/api/')?res.sendFile(path.join(__dirname,'index.html')):res.status(404).json({error:'Not found'}));
 const Branch=branches.Branch;
-const Student=mongoose.models.Student||mongoose.model('Student',new mongoose.Schema({id:{type:String,unique:true,required:true},name:String,mobile:String,branch:String,branchId:{type:mongoose.Schema.Types.ObjectId,ref:'Branch',default:null},totalFee:Number,paidFee:Number,payments:[{amount:Number,date:String,method:String,note:String,createdAt:{type:Date,default:Date.now}}]},{timestamps:true}));
+const Student=mongoose.models.Student||mongoose.model('Student',new mongoose.Schema({id:{type:String,unique:true,required:true},name:String,mobile:String,branch:String,branchId:{type:mongoose.Schema.Types.ObjectId,ref:'Branch',default:null},totalFee:Number,paidFee:Number},{timestamps:true}));
 const History=mongoose.models.CollectionHistory||mongoose.model('CollectionHistory',new mongoose.Schema({date:String,velanja:Number,mota:Number,mission:Number,branch:String,branchId:{type:mongoose.Schema.Types.ObjectId,ref:'Branch',default:null},amount:Number},{timestamps:true}));
-async function ensureBranches(){
-// IMPORTANT: seed the three starter branches ONLY when the database is completely empty.
-// Never search by the old default names and recreate them after an admin renames a branch.
+async function ensureBranches(){const seedNames=[['Velanja','VELANJ'],['Mota Varachha','MOTAVA'],['Mission Road','MISSION']];for(const [name,code] of seedNames){let b=await Branch.findOne({name});if(!b){try{b=await Branch.create({name,code,active:true})}catch(e){b=await Branch.findOne({name})}}}
 let all=await Branch.find();
-if(all.length===0){
-  const seedNames=[['Velanja','VELANJ'],['Mota Varachha','MOTAVA'],['Mission Road','MISSION']];
-  for(const [name,code] of seedNames){
-    await Branch.create({name,code,active:true});
-  }
-  all=await Branch.find();
-}
 // Turn any legacy branch names already present in student data into real branches.
 const legacyNames=await Student.distinct('branch');for(const raw of legacyNames){const name=String(raw||'').trim();if(!name||name==='Unassigned')continue;if(!all.some(b=>b.name===name)){const code=name.replace(/[^A-Za-z0-9]/g,'').slice(0,8).toUpperCase()||('BR'+Date.now().toString().slice(-5));try{await Branch.create({name,code,active:true})}catch(e){}}}
 all=await Branch.find();const byName=new Map(all.map(b=>[b.name,b]));
@@ -32,16 +16,7 @@ if(await Student.countDocuments()===0){const seed=require('./seed-data.json');if
 for(const b of all)await Student.updateMany({branch:b.name,$or:[{branchId:null},{branchId:{$exists:false}}]},{$set:{branchId:b._id}});
 // No student is allowed to remain unassigned. Legacy blank/unassigned rows go to the first real branch.
 const fallback=all[0];if(fallback)await Student.updateMany({$or:[{branch:null},{branch:''},{branch:'Unassigned'},{branchId:null},{branchId:{$exists:false}}]},{$set:{branch:fallback.name,branchId:fallback._id}});
-// IMPORTANT: Login credentials are managed from Branches & Access.
-// Never recreate or overwrite a branch login during server startup, otherwise
-// admin changes to username/password/permissions are lost after restart.
-const {BranchUser}=branches;
-for(const b of all){
-  const u=await BranchUser.findOne({branchId:b._id});
-  // Keep existing login exactly as the admin saved it. Missing logins are also
-  // allowed; the Branches & Access screen can create one when the admin saves.
-  if(u && !u.branchId){u.branchId=b._id;await u.save();}
-}
+const {BranchUser,hashPw,encPw,DEFAULT_PERMISSIONS}=branches; for(const b of all){let u=await BranchUser.findOne({branchId:b._id});if(!u){const pw=b.code+'@2026';await BranchUser.create({username:b.code.toLowerCase()+'_admin',passwordHash:hashPw(pw),passwordEncrypted:encPw(pw),branchId:b._id,permissions:DEFAULT_PERMISSIONS});}else if(!u.passwordEncrypted){const pw=b.code+'@2026';u.passwordHash=hashPw(pw);u.passwordEncrypted=encPw(pw);await u.save();}if(!u.permissions||u.permissions.size===0){u.permissions=DEFAULT_PERMISSIONS;await u.save();}}
 // Convert legacy multi-branch history rows into branch-specific entries once.
 const legacy=await History.find({branchId:null}).lean();if(legacy.length){for(const h of legacy){const vals=[['Velanja',h.velanja],['Mota Varachha',h.mota],['Mission Road',h.mission]];for(const [name,val] of vals){if(Number(val||0)!==0){const b=byName.get(name);if(b)await History.create({date:h.date,branch:name,branchId:b._id,amount:Number(val),velanja:null,mota:null,mission:null});}}await History.deleteOne({_id:h._id});}}
 if(await History.countDocuments()===0){const seed=require('./seed-data.json');if(seed.history?.length){for(const h of seed.history){for(const [name,val] of [['Velanja',h.velanja],['Mota Varachha',h.mota],['Mission Road',h.mission]])if(Number(val||0)!==0){const b=byName.get(name);if(b)await History.create({date:String(h.date),branch:name,branchId:b._id,amount:Number(val),velanja:null,mota:null,mission:null});}}}}

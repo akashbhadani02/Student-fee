@@ -4,8 +4,7 @@
   "private": true,
   "scripts": {
     "start": "node server.js",
-    "dev": "node server.js",
-    "reset-admin": "node scripts/reset-admin.js"
+    "dev": "node server.js"
   },
   "dependencies": {
     "cors": "^2.8.5",
