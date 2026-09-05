@@ -25,6 +25,59 @@ button,input,select{font:inherit}button{cursor:pointer}.hidden{display:none!impo
 .modal{position:fixed;inset:0;background:rgba(15,22,40,.45);display:none;align-items:center;justify-content:center;padding:20px;z-index:50}.modal.show{display:flex}.modal-card{width:min(650px,100%);max-height:90vh;overflow:auto;background:#fff;border-radius:20px;box-shadow:0 30px 80px rgba(0,0,0,.25)}.modal-head{padding:18px 20px;border-bottom:1px solid var(--line);display:flex;justify-content:space-between;align-items:center}.modal-head h3{margin:0}.modal-body{padding:20px}.formgrid{display:grid;grid-template-columns:1fr 1fr;gap:12px}.actions{display:flex;justify-content:flex-end;gap:8px;margin-top:18px}.toast{position:fixed;right:20px;bottom:20px;background:#172033;color:#fff;padding:12px 15px;border-radius:11px;box-shadow:var(--shadow);z-index:100;font-size:12px}.mobile-menu{display:none}
 @media(max-width:1000px){.app{grid-template-columns:82px 1fr}.sidebar{padding:18px 10px}.brand div:not(.logo-mark),.nav button span,.user-mini,.logout span{display:none}.brand{justify-content:center}.nav button{text-align:center}.stats{grid-template-columns:repeat(2,1fr)}.grid2{grid-template-columns:1fr}.branch-grid{grid-template-columns:1fr 1fr}}
 @media(max-width:680px){.app{display:block}.sidebar{position:fixed;left:-280px;width:250px;z-index:60;transition:.2s}.sidebar.open{left:0}.mobile-menu{display:block}.content{padding:16px}.topbar{padding:0 16px}.stats{grid-template-columns:1fr 1fr;gap:9px}.stat{padding:14px}.stat .value{font-size:21px}.branch-grid{grid-template-columns:1fr}.formgrid{grid-template-columns:1fr}.top-actions .pill{display:none}}
+
+/* Enhanced mobile responsive layout */
+.app{position:relative}
+@media(max-width:680px){
+  html,body{width:100%;max-width:100%;overflow-x:hidden}
+  .app{min-height:100dvh}
+  .app.menu-open::before{
+    content:"";position:fixed;inset:0;background:rgba(15,22,40,.42);
+    z-index:55;backdrop-filter:blur(1px)
+  }
+  .sidebar{top:0;bottom:0;height:100dvh;max-height:100dvh;overflow-y:auto;padding:18px 14px}
+  .sidebar.open{left:0;box-shadow:12px 0 35px rgba(0,0,0,.18)}
+  .topbar{height:auto;min-height:64px;padding:10px 12px;gap:8px}
+  .topbar>div:first-child{min-width:0;display:flex;align-items:center;flex:1}
+  .topbar h2{font-size:16px;line-height:1.2}
+  .topbar p{font-size:10px;line-height:1.35;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:230px}
+  .top-actions{flex-shrink:0}
+  .iconbtn{min-width:42px;min-height:42px;padding:9px}
+  .mobile-menu{margin:0 2px 0 0}
+  .content{padding:12px;max-width:none}
+  .stats{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+  .stat{padding:13px;min-width:0}
+  .stat .label{font-size:10px}
+  .stat .value{font-size:20px;line-height:1.15;word-break:break-word}
+  .stat .sub{font-size:10px}
+  .grid2{grid-template-columns:1fr;gap:12px;margin-top:12px}
+  .branch-grid{grid-template-columns:1fr;gap:12px}
+  .panel{border-radius:14px}
+  .panel-head{padding:14px;align-items:flex-start;flex-direction:column}
+  .panel-head .toolbar,.panel-head>div.toolbar{width:100%}
+  .toolbar{width:100%;display:grid;grid-template-columns:1fr;gap:8px}
+  .toolbar input,.toolbar select,.toolbar .btn,.toolbar button{width:100%;min-width:0;min-height:42px}
+  .branch-tabs{overflow-x:auto;flex-wrap:nowrap;padding-bottom:4px;scrollbar-width:thin}
+  .branch-tab{flex:0 0 auto;min-height:42px}
+  .table-wrap{width:100%;overflow-x:auto;-webkit-overflow-scrolling:touch;overscroll-behavior-x:contain}
+  .table{min-width:680px}
+  .table th,.table td{padding:11px 10px;white-space:nowrap}
+  .actions{flex-direction:column;align-items:stretch}
+  .actions .btn{width:100%;min-height:44px}
+  .formgrid{grid-template-columns:1fr;gap:8px}
+  .field{margin:10px 0}
+  .modal{padding:8px;align-items:flex-end}
+  .modal-card{width:100%;max-height:92dvh;border-radius:18px 18px 10px 10px}
+  .modal-head{padding:14px 16px}
+  .modal-body{padding:14px 16px calc(16px + env(safe-area-inset-bottom))}
+  .login{padding:14px}
+  .login-card{padding:22px 18px;border-radius:20px}
+  .mode button,.primary{min-height:44px}
+  .field input,.field select{min-height:44px}
+}
+@media(min-width:681px) and (max-width:1000px){
+  .table-wrap{overflow-x:auto}
+}
 </style>
 </head>
 <body>
@@ -94,7 +147,7 @@ async function refreshBranchCredentials(){if(state.access?.type!=='main')return;
 async function saveBranchCredentials(button,id,branchId){const row=button.closest('tr');const username=(row?.querySelector('[data-field="username"]')?.value||'').trim();const password=row?.querySelector('[data-field="password"]')?.value||'';if(!username)return toast('Please enter the Branch Login ID.');if(password.length<4)return toast('Password must be at least 4 characters.');try{const cell=button?.closest('tr');const branchName=(cell?.querySelector('[data-branch-name]')?.dataset.branchName||'').trim();const branchCodeValue=(cell?.querySelector('[data-branch-code]')?.dataset.branchCode||'').trim();
 if(id){await api('/api/branches',{method:'PUT',headers:authHeaders('pageOpen'),body:JSON.stringify({id:String(id),username,password,name:branchName,code:branchCodeValue,branchId:branchId||undefined})});}
 else{await api('/api/branches',{method:'PUT',headers:authHeaders('pageOpen'),body:JSON.stringify({username,password,name:branchName,code:branchCodeValue,branchId:branchId||undefined})});}await refreshBranchCredentials();renderBranches();toast('Branch Login ID & Password updated.')}catch(e){toast(e.message)}}
-function go(p){state.page=p;document.querySelectorAll('.page').forEach(x=>x.classList.remove('active'));document.getElementById(p).classList.add('active');document.querySelectorAll('.nav button').forEach(x=>x.classList.toggle('active',x.dataset.page===p));pageTitle.querySelector('h2').textContent=pageMeta[p][0];pageSub.textContent=pageMeta[p][1];sidebar.classList.remove('open');renderPage(p)}
+function go(p){state.page=p;document.querySelectorAll('.page').forEach(x=>x.classList.remove('active'));document.getElementById(p).classList.add('active');document.querySelectorAll('.nav button').forEach(x=>x.classList.toggle('active',x.dataset.page===p));pageTitle.querySelector('h2').textContent=pageMeta[p][0];pageSub.textContent=pageMeta[p][1];sidebar.classList.remove('open');document.getElementById('app').classList.remove('menu-open');renderPage(p)}
 function renderAll(){renderPage(state.page)}
 function renderPage(p){if(p==='dashboard')renderDashboard();if(p==='students')renderStudents();if(p==='collections')renderCollections();if(p==='branches')renderBranches();if(p==='reports')renderReports()}
 function esc(v){return String(v??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[m]))}
@@ -180,6 +233,20 @@ function filterBranch(name){go('students');setTimeout(()=>{state.studentBranch=n
 function renderReports(){const ss=scopedStudents(),by=branchSummary(),total=ss.reduce((a,s)=>a+fee(s),0),received=ss.reduce((a,s)=>a+paid(s),0),earned=commission(received),collections=scopedCollectionTotal(),balance=Math.max(0,earned-collections);reports.innerHTML=`<div class="grid2"><div class="panel"><div class="panel-head"><div><h3>Grand financial summary</h3><p>Collection is money taken from a branch, so it is deducted directly from your 25% total.</p></div><button class="btn green" onclick="exportStudents()">Export students</button></div><div class="table-wrap"><table class="table"><tbody><tr><td>Total students</td><td><b>${ss.length}</b></td></tr><tr><td>Total fee</td><td><b>${money(total)}</b></td></tr><tr><td>Fee received</td><td><b>${money(received)}</b></td></tr><tr><td>Your 25%</td><td><b>${money(earned)}</b></td></tr><tr><td>Collection taken from branches</td><td><b>${money(collections)}</b></td></tr><tr><td>Balance still to collect</td><td><b>${money(balance)}</b></td></tr></tbody></table></div></div><div class="panel"><div class="panel-head"><div><h3>Branch report</h3><p>Branch-wise + grand total</p></div></div><div class="table-wrap"><table class="table"><thead><tr><th>Branch</th><th>Total Fee</th><th>Received</th><th>25%</th><th>Collection</th><th>Balance</th></tr></thead><tbody>${by.map(b=>`<tr><td><b>${esc(b.name)}</b></td><td>${money(b.total)}</td><td>${money(b.paid)}</td><td>${money(b.earned)}</td><td>${money(b.collections)}</td><td><b>${money(b.balance)}</b></td></tr>`).join('')}</tbody></table></div></div></div>`}
 function exportStudents(){const rows=scopedStudents().map(s=>({ID:s.id,Name:s.name,Mobile:s.mobile,Branch:s.branch,'Total Fee':fee(s),'Paid Fee':paid(s),'Pending':pending(s),'Commission 25%':commission(paid(s)),}));const ws=XLSX.utils.json_to_sheet(rows),wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,ws,'Students');XLSX.writeFile(wb,'SpeakPro_Students.xlsx')}
 function exportCollections(){const rows=scopedHistory().map(h=>({Date:h.date,Branch:h.branch,'Collection Taken':collectionAmount(h)}));const ws=XLSX.utils.json_to_sheet(rows),wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,ws,'Collections');XLSX.writeFile(wb,'SpeakPro_Collections.xlsx')}
-function closeModal(){modal.classList.remove('show')}function toggleSidebar(){sidebar.classList.toggle('open')}
+function closeModal(){modal.classList.remove('show')}
+function toggleSidebar(){
+  const sb=document.getElementById('sidebar'), appEl=document.getElementById('app');
+  const open=sb.classList.toggle('open');
+  appEl.classList.toggle('menu-open',open);
+}
+document.addEventListener('keydown',e=>{
+  if(e.key==='Escape'){
+    const sb=document.getElementById('sidebar'), appEl=document.getElementById('app');
+    sb.classList.remove('open'); appEl.classList.remove('menu-open'); closeModal();
+  }
+});
+document.getElementById('app').addEventListener('click',e=>{
+  if(e.target===e.currentTarget && e.currentTarget.classList.contains('menu-open')) toggleSidebar();
+});
 </script>
 </body></html>
