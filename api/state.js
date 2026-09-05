@@ -10,7 +10,7 @@ const historySchema=new mongoose.Schema({date:String,velanja:Number,mota:Number,
 const payoutSchema=new mongoose.Schema({date:String,branch:String,branchId:{type:mongoose.Schema.Types.ObjectId,ref:'Branch',default:null},amount:Number,note:String},{timestamps:true});
 const Student=mongoose.models.Student||mongoose.model('Student',studentSchema);const CollectionHistory=mongoose.models.CollectionHistory||mongoose.model('CollectionHistory',historySchema);const CommissionPayout=mongoose.models.CommissionPayout||mongoose.model('CommissionPayout',payoutSchema);const AdminSettings=mongoose.models.AdminSettings||mongoose.model('AdminSettings',adminSchema);
 function sha(v){return crypto.createHash('sha256').update(String(v)).digest('hex');}
-async function adminOk(req,key){const a=await AdminSettings.findOne({key:'main'});if(!a)return false;const p=String(req.headers['x-admin-password']||'');if(!p)return false;const isMain=String(req.headers['x-main-admin']||'')==='true';/* Main admin is already authenticated at login; use the main login password for all admin actions. Branch admins still use action-specific approval passwords. */const hash=isMain?(a.passwordHashes?.get('pageOpen')||a.passwordHash):a.passwordHashes?.get(key);return !!hash&&hash===sha(p);}
+async function adminOk(req,key){const a=await AdminSettings.findOne({key:'main'});if(!a)return false;const p=sha(String(req.headers['x-admin-password']||''));const actionHash=a.passwordHashes?.get(key);const loginHash=a.passwordHashes?.get('pageOpen')||a.passwordHash;return (!!actionHash&&actionHash===p)||(!!loginHash&&loginHash===p); }
 function auth(req){return verifyToken(String(req.headers.authorization||'').replace(/^Bearer\s+/i,''));}
 function perm(a,key){return a?.type==='branch' && a.permissions?.[key]!==false;}
 async function bootstrapData(){
@@ -38,5 +38,51 @@ const requestedKey=String(req.headers['x-admin-action']||'pageOpen');
 const adminOverride=!!(a?.type==='branch' && String(req.headers['x-admin-password']||'') && (await adminOk(req,requestedKey)));
 if(req.method==='GET'){if(!a&&!main)return res.status(401).json({error:'Login required.'});let branchDoc=null;if(a?.type==='branch')branchDoc=await Branch.findById(a.branchId).lean();const filter=a?.type==='branch'?{$or:[{branchId:new mongoose.Types.ObjectId(a.branchId)},{branch:branchDoc?.name}]}:{};const [students,history,payouts]=await Promise.all([Student.find(filter).sort({id:1}).lean(),CollectionHistory.find(filter).sort({date:1,_id:1}).lean(),CommissionPayout.find(filter).sort({date:1,_id:1}).lean()]);return res.json({students,history,payouts,access:a?{type:'branch',branchId:a.branchId,branch:branchDoc?.name||a.branch||'',code:branchDoc?.code||a.code||'',username:a.username,permissions:a.permissions||{}}:{type:'main'}});}
 if(req.method!=='PUT')return res.status(405).json({error:'Method not allowed'});const key=requestedKey;if(a){if(!adminOverride&&!perm(a,key))return res.status(403).json({error:'Editing this branch requires the main admin password.'});}else if(!(await adminOk(req,key)))return res.status(403).json({error:'Wrong password.'});const body=req.body||{};if(!Array.isArray(body.students)||!Array.isArray(body.history))return res.status(400).json({error:'students and history must be arrays'});
-const students=body.students.map(normS).filter(s=>s.id&&s.name);const history=body.history.map(normH).filter(h=>h.date);const payouts=Array.isArray(body.payouts)?body.payouts.map(normP).filter(h=>h.date&&h.amount>0):[];if(a){const bid=new mongoose.Types.ObjectId(a.branchId);const branchDoc=await Branch.findById(bid).lean();if(!branchDoc||!branchDoc.active)return res.status(403).json({error:'Your branch is inactive or missing.'});for(const s of students)if(String(s.branchId||bid)!==String(bid))return res.status(403).json({error:'Every student must belong to your branch.'});for(const h of history)if(h.branchId&&String(h.branchId)!==String(bid))return res.status(403).json({error:'Branch history access violation.'});for(const h of payouts)if(h.branchId&&String(h.branchId)!==String(bid))return res.status(403).json({error:'Branch payout access violation.'});const cleanStudents=students.map(s=>({...s,branchId:bid,branch:branchDoc.name}));await Student.deleteMany({branchId:bid,id:{$nin:cleanStudents.map(s=>s.id)}});for(const s of cleanStudents)await Student.updateOne({id:s.id},{$set:s},{upsert:true});await CollectionHistory.deleteMany({branchId:bid});if(history.length)await CollectionHistory.insertMany(history.map(h=>({...h,branchId:bid,branch:branchDoc.name,amount:h.amount==null?0:h.amount,velanja:null,mota:null,mission:null})));await CommissionPayout.deleteMany({branchId:bid});if(payouts.length)await CommissionPayout.insertMany(payouts.map(h=>({...h,branchId:bid,branch:branchDoc.name})));}else{const ids=students.map(s=>s.id);await Student.deleteMany({id:{$nin:ids}});for(const s of students)await Student.updateOne({id:s.id},{$set:s},{upsert:true});await CollectionHistory.deleteMany({});if(history.length)await CollectionHistory.insertMany(history);await CommissionPayout.deleteMany({});if(payouts.length)await CommissionPayout.insertMany(payouts);}
+const students=body.students.map(normS).filter(s=>s.id&&s.name);const history=body.history.map(normH).filter(h=>h.date);const payouts=Array.isArray(body.payouts)?body.payouts.map(normP).filter(h=>h.date&&h.amount>0):[];const studentAction=key.startsWith('student');
+const collectionAction=key.startsWith('collection');
+const payoutAction=key.startsWith('commissionPayout');
+if(a){
+ const bid=new mongoose.Types.ObjectId(a.branchId);
+ const branchDoc=await Branch.findById(bid).lean();
+ if(!branchDoc||!branchDoc.active)return res.status(403).json({error:'Your branch is inactive or missing.'});
+ for(const s of students)if(String(s.branchId||bid)!==String(bid))return res.status(403).json({error:'Every student must belong to your branch.'});
+ for(const h of history)if(h.branchId&&String(h.branchId)!==String(bid))return res.status(403).json({error:'Branch history access violation.'});
+ for(const h of payouts)if(h.branchId&&String(h.branchId)!==String(bid))return res.status(403).json({error:'Branch payout access violation.'});
+ if(studentAction){
+  const cleanStudents=students.map(s=>({...s,branchId:bid,branch:branchDoc.name}));
+  await Promise.all([
+   Student.deleteMany({branchId:bid,id:{$nin:cleanStudents.map(s=>s.id)}}),
+   cleanStudents.length?Student.bulkWrite(cleanStudents.map(s=>({updateOne:{filter:{id:s.id},update:{$set:s},upsert:true}})),{ordered:false}):Promise.resolve()
+  ]);
+ }
+ if(collectionAction){
+  const hs=history.map(h=>({...h,branchId:bid,branch:branchDoc.name,amount:h.amount==null?0:h.amount,velanja:null,mota:null,mission:null}));
+  const keep=hs.filter(h=>h._id).map(h=>h._id);
+  await CollectionHistory.deleteMany({branchId:bid,_id:{$nin:keep}});
+  if(hs.length)await CollectionHistory.bulkWrite(hs.map(h=>({updateOne:{filter:h._id?{_id:h._id}:{date:h.date,branchId:bid,amount:h.amount},update:{$set:h},upsert:true}})),{ordered:false});
+ }
+ if(payoutAction){
+  const keep=payouts.filter(h=>h._id).map(h=>h._id);
+  await CommissionPayout.deleteMany({branchId:bid,_id:{$nin:keep}});
+  if(payouts.length)await CommissionPayout.bulkWrite(payouts.map(h=>({updateOne:{filter:h._id?{_id:h._id}:{date:h.date,branchId:bid,amount:h.amount},update:{$set:{...h,branchId:bid,branch:branchDoc.name}},upsert:true}})),{ordered:false});
+ }
+}else{
+ if(studentAction){
+  const ids=students.map(s=>s.id);
+  await Promise.all([
+   Student.deleteMany({id:{$nin:ids}}),
+   students.length?Student.bulkWrite(students.map(s=>({updateOne:{filter:{id:s.id},update:{$set:s},upsert:true}})),{ordered:false}):Promise.resolve()
+  ]);
+ }
+ if(collectionAction){
+  const keep=history.filter(h=>h._id).map(h=>h._id);
+  await CollectionHistory.deleteMany({_id:{$nin:keep}});
+  if(history.length)await CollectionHistory.bulkWrite(history.map(h=>({updateOne:{filter:h._id?{_id:h._id}:{date:h.date,branch:h.branch,amount:h.amount},update:{$set:h},upsert:true}})),{ordered:false});
+ }
+ if(payoutAction){
+  const keep=payouts.filter(h=>h._id).map(h=>h._id);
+  await CommissionPayout.deleteMany({_id:{$nin:keep}});
+  if(payouts.length)await CommissionPayout.bulkWrite(payouts.map(h=>({updateOne:{filter:h._id?{_id:h._id}:{date:h.date,branch:h.branch,amount:h.amount},update:{$set:h},upsert:true}})),{ordered:false});
+ }
+}
 const filter=a?{$or:[{branchId:new mongoose.Types.ObjectId(a.branchId)},{branch:(await Branch.findById(a.branchId).lean())?.name}]}:{};const [savedStudents,savedHistory,savedPayouts]=await Promise.all([Student.find(filter).sort({id:1}).lean(),CollectionHistory.find(filter).sort({date:1,_id:1}).lean(),CommissionPayout.find(filter).sort({date:1,_id:1}).lean()]);return res.json({students:savedStudents,history:savedHistory,payouts:savedPayouts});}catch(e){console.error(e);return res.status(500).json({error:e.message||'Server error'});}};
