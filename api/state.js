@@ -6,13 +6,17 @@ const PASSWORD_KEYS=["pageOpen","studentAdd","studentEdit","studentDelete","coll
 const adminSchema=new mongoose.Schema({key:{type:String,unique:true,default:'main'},passwordHashes:{type:Map,of:String,default:{}},passwordHash:String},{timestamps:true});
 const paymentSchema=new mongoose.Schema({date:String,amount:Number,note:String},{_id:false});
 const studentSchema=new mongoose.Schema({id:{type:String,unique:true,required:true},name:String,mobile:String,branch:String,branchId:{type:mongoose.Schema.Types.ObjectId,ref:'Branch',default:null},totalFee:Number,paidFee:Number,commissionPaid:{type:Number,default:0},payments:{type:[paymentSchema],default:[]}},{timestamps:true});
+const deletedStudentSchema=new mongoose.Schema({id:{type:String,required:true},name:String,mobile:String,branch:String,branchId:{type:mongoose.Schema.Types.ObjectId,ref:'Branch',default:null},totalFee:Number,paidFee:Number,commissionPaid:{type:Number,default:0},payments:{type:[paymentSchema],default:[]},deletedAt:{type:Date,default:Date.now}},{timestamps:true});
 const historySchema=new mongoose.Schema({date:String,velanja:Number,mota:Number,mission:Number,branch:String,branchId:{type:mongoose.Schema.Types.ObjectId,ref:'Branch',default:null},amount:Number},{timestamps:true});
 const payoutSchema=new mongoose.Schema({date:String,branch:String,branchId:{type:mongoose.Schema.Types.ObjectId,ref:'Branch',default:null},amount:Number,note:String},{timestamps:true});
-const Student=mongoose.models.Student||mongoose.model('Student',studentSchema);const CollectionHistory=mongoose.models.CollectionHistory||mongoose.model('CollectionHistory',historySchema);const CommissionPayout=mongoose.models.CommissionPayout||mongoose.model('CommissionPayout',payoutSchema);const AdminSettings=mongoose.models.AdminSettings||mongoose.model('AdminSettings',adminSchema);
+const Student=mongoose.models.Student||mongoose.model('Student',studentSchema);const DeletedStudent=mongoose.models.DeletedStudent||mongoose.model('DeletedStudent',deletedStudentSchema);
+Student.schema.index({branchId:1,id:1});
+DeletedStudent.schema.index({branchId:1,deletedAt:-1});const CollectionHistory=mongoose.models.CollectionHistory||mongoose.model('CollectionHistory',historySchema);const CommissionPayout=mongoose.models.CommissionPayout||mongoose.model('CommissionPayout',payoutSchema);const AdminSettings=mongoose.models.AdminSettings||mongoose.model('AdminSettings',adminSchema);
 function sha(v){return crypto.createHash('sha256').update(String(v)).digest('hex');}
 async function adminOk(req,key){const a=await AdminSettings.findOne({key:'main'});if(!a)return false;const p=sha(String(req.headers['x-admin-password']||''));const actionHash=a.passwordHashes?.get(key);const loginHash=a.passwordHashes?.get('pageOpen')||a.passwordHash;return (!!actionHash&&actionHash===p)||(!!loginHash&&loginHash===p); }
 function auth(req){return verifyToken(String(req.headers.authorization||'').replace(/^Bearer\s+/i,''));}
 function perm(a,key){return a?.type==='branch' && a.permissions?.[key]!==false;}
+let bootstrapPromise=null;
 async function bootstrapData(){
   const branches=await Branch.find({active:true}).sort({name:1}).lean();
   const byName=new Map(branches.map(b=>[String(b.name).trim().toLowerCase(),b]));
@@ -33,11 +37,33 @@ async function bootstrapData(){
 function normS(s){return {id:String(s.id||''),name:String(s.name||'').trim(),mobile:String(s.mobile||'').trim(),branch:String(s.branch||''),branchId:s.branchId||null,totalFee:s.totalFee==null||s.totalFee===''?null:Number(s.totalFee),paidFee:s.paidFee==null||s.paidFee===''?null:Number(s.paidFee),commissionPaid:Number(s.commissionPaid||0),payments:Array.isArray(s.payments)?s.payments.map(x=>({date:String(x.date||''),amount:Number(x.amount||0),note:String(x.note||'')})).filter(x=>x.date&&x.amount>0):[]};}
 function normH(h){return {date:String(h.date||''),velanja:h.velanja==null||h.velanja===''?null:Number(h.velanja),mota:h.mota==null||h.mota===''?null:Number(h.mota),mission:h.mission==null||h.mission===''?null:Number(h.mission),branch:String(h.branch||''),branchId:h.branchId||null,amount:h.amount==null||h.amount===''?null:Number(h.amount)};}
 function normP(h){return {date:String(h.date||''),branch:String(h.branch||''),branchId:h.branchId||null,amount:Number(h.amount||0),note:String(h.note||'')};}
-module.exports=async(req,res)=>{res.setHeader('Access-Control-Allow-Origin','*');res.setHeader('Access-Control-Allow-Methods','GET,PUT,OPTIONS');res.setHeader('Access-Control-Allow-Headers','Content-Type,Authorization,X-Admin-Password,X-Admin-Action,X-Main-Admin');res.setHeader('Cache-Control','no-store');if(req.method==='OPTIONS')return res.status(204).end();try{await db();await bootstrapData();const a=auth(req),main=String(req.headers['x-main-admin']||'')==='true';
+module.exports=async(req,res)=>{res.setHeader('Access-Control-Allow-Origin','*');res.setHeader('Access-Control-Allow-Methods','GET,PUT,OPTIONS');res.setHeader('Access-Control-Allow-Headers','Content-Type,Authorization,X-Admin-Password,X-Admin-Action,X-Main-Admin');res.setHeader('Cache-Control','no-store');if(req.method==='OPTIONS')return res.status(204).end();try{await db();if(!bootstrapPromise) bootstrapPromise=bootstrapData().catch(e=>{bootstrapPromise=null;throw e});await bootstrapPromise;const a=auth(req),main=String(req.headers['x-main-admin']||'')==='true';
 const requestedKey=String(req.headers['x-admin-action']||'pageOpen');
 const adminOverride=!!(a?.type==='branch' && String(req.headers['x-admin-password']||'') && (await adminOk(req,requestedKey)));
-if(req.method==='GET'){if(!a&&!main)return res.status(401).json({error:'Login required.'});let branchDoc=null;if(a?.type==='branch')branchDoc=await Branch.findById(a.branchId).lean();const filter=a?.type==='branch'?{$or:[{branchId:new mongoose.Types.ObjectId(a.branchId)},{branch:branchDoc?.name}]}:{};const [students,history,payouts]=await Promise.all([Student.find(filter).sort({id:1}).lean(),CollectionHistory.find(filter).sort({date:1,_id:1}).lean(),CommissionPayout.find(filter).sort({date:1,_id:1}).lean()]);return res.json({students,history,payouts,access:a?{type:'branch',branchId:a.branchId,branch:branchDoc?.name||a.branch||'',code:branchDoc?.code||a.code||'',username:a.username,permissions:a.permissions||{}}:{type:'main'}});}
-if(req.method!=='PUT')return res.status(405).json({error:'Method not allowed'});const key=requestedKey;if(a){if(!adminOverride&&!perm(a,key))return res.status(403).json({error:'Editing this branch requires the main admin password.'});}else if(!(await adminOk(req,key)))return res.status(403).json({error:'Wrong password.'});const body=req.body||{};if(!Array.isArray(body.students)||!Array.isArray(body.history))return res.status(400).json({error:'students and history must be arrays'});
+if(req.method==='GET'){if(!a&&!main)return res.status(401).json({error:'Login required.'});let branchDoc=null;if(a?.type==='branch')branchDoc=await Branch.findById(a.branchId).lean();const filter=a?.type==='branch'?{$or:[{branchId:new mongoose.Types.ObjectId(a.branchId)},{branch:branchDoc?.name}]}:{};const [students,history,payouts,deletedStudents]=await Promise.all([Student.find(filter).sort({id:1}).lean(),CollectionHistory.find(filter).sort({date:1,_id:1}).lean(),CommissionPayout.find(filter).sort({date:1,_id:1}).lean(),DeletedStudent.find(filter).sort({deletedAt:-1}).lean()]);return res.json({students,history,payouts,deletedStudents:a?[]:deletedStudents,access:a?{type:'branch',branchId:a.branchId,branch:branchDoc?.name||a.branch||'',code:branchDoc?.code||a.code||'',username:a.username,permissions:a.permissions||{}}:{type:'main'}});}
+if(req.method!=='PUT')return res.status(405).json({error:'Method not allowed'});const key=requestedKey;if(a){if(!adminOverride&&!perm(a,key))return res.status(403).json({error:'Editing this branch requires the main admin password.'});}else if(!(await adminOk(req,key)))return res.status(403).json({error:'Wrong password.'});const body=req.body||{};
+if(key==='studentPermanentDelete'){
+ if(a)return res.status(403).json({error:'Only Main Admin can permanently delete students.'});
+ const deleteId=String(body.deleteId||'').trim();
+ if(!deleteId)return res.status(400).json({error:'deleteId is required.'});
+ const result=await DeletedStudent.deleteOne({id:deleteId});
+ if(!result.deletedCount)return res.status(404).json({error:'Deleted student not found.'});
+ const deletedStudents=await DeletedStudent.find({}).sort({deletedAt:-1}).lean();
+ return res.json({deletedStudents,permanentlyDeleted:deleteId});
+}
+if(key==='studentRestore'){
+ if(a)return res.status(403).json({error:'Only Main Admin can restore deleted students.'});
+ const restoreId=String(body.restoreId||'').trim();
+ if(!restoreId)return res.status(400).json({error:'restoreId is required.'});
+ const deleted=await DeletedStudent.findOne({id:restoreId}).lean();
+ if(!deleted)return res.status(404).json({error:'Deleted student not found.'});
+ if(await Student.exists({id:restoreId}))return res.status(409).json({error:'Student ID already exists.'});
+ const restored={...deleted};delete restored._id;delete restored.createdAt;delete restored.updatedAt;delete restored.deletedAt;
+ await Student.create(restored);await DeletedStudent.deleteOne({id:restoreId});
+ const [savedStudents,savedHistory,savedPayouts]=await Promise.all([Student.find({}).sort({id:1}).lean(),CollectionHistory.find({}).sort({date:1,_id:1}).lean(),CommissionPayout.find({}).sort({date:1,_id:1}).lean()]);
+ return res.json({students:savedStudents,history:savedHistory,payouts:savedPayouts,restored:restoreId});
+}
+if(!Array.isArray(body.students)||!Array.isArray(body.history))return res.status(400).json({error:'students and history must be arrays'});
 const students=body.students.map(normS).filter(s=>s.id&&s.name);const history=body.history.map(normH).filter(h=>h.date);const payouts=Array.isArray(body.payouts)?body.payouts.map(normP).filter(h=>h.date&&h.amount>0):[];const studentAction=key.startsWith('student');
 const collectionAction=key.startsWith('collection');
 const payoutAction=key.startsWith('commissionPayout');
@@ -50,6 +76,11 @@ if(a){
  for(const h of payouts)if(h.branchId&&String(h.branchId)!==String(bid))return res.status(403).json({error:'Branch payout access violation.'});
  if(studentAction){
   const cleanStudents=students.map(s=>({...s,branchId:bid,branch:branchDoc.name}));
+  if(key==='studentDelete'){
+   const keepIds=cleanStudents.map(s=>s.id);
+   const removed=await Student.find({branchId:bid,id:{$nin:keepIds}}).lean();
+   if(removed.length)try{await DeletedStudent.insertMany(removed.map(x=>({...x,deletedAt:new Date()})),{ordered:false});}catch(e){console.error('archive delete:',e.message)}
+  }
   await Promise.all([
    Student.deleteMany({branchId:bid,id:{$nin:cleanStudents.map(s=>s.id)}}),
    cleanStudents.length?Student.bulkWrite(cleanStudents.map(s=>({updateOne:{filter:{id:s.id},update:{$set:s},upsert:true}})),{ordered:false}):Promise.resolve()
@@ -69,6 +100,10 @@ if(a){
 }else{
  if(studentAction){
   const ids=students.map(s=>s.id);
+  if(key==='studentDelete'){
+   const removed=await Student.find({id:{$nin:ids}}).lean();
+   if(removed.length)try{await DeletedStudent.insertMany(removed.map(x=>({...x,deletedAt:new Date()})),{ordered:false});}catch(e){console.error('archive delete:',e.message)}
+  }
   await Promise.all([
    Student.deleteMany({id:{$nin:ids}}),
    students.length?Student.bulkWrite(students.map(s=>({updateOne:{filter:{id:s.id},update:{$set:s},upsert:true}})),{ordered:false}):Promise.resolve()
@@ -85,4 +120,4 @@ if(a){
   if(payouts.length)await CommissionPayout.bulkWrite(payouts.map(h=>({updateOne:{filter:h._id?{_id:h._id}:{date:h.date,branch:h.branch,amount:h.amount},update:{$set:h},upsert:true}})),{ordered:false});
  }
 }
-const filter=a?{$or:[{branchId:new mongoose.Types.ObjectId(a.branchId)},{branch:(await Branch.findById(a.branchId).lean())?.name}]}:{};const [savedStudents,savedHistory,savedPayouts]=await Promise.all([Student.find(filter).sort({id:1}).lean(),CollectionHistory.find(filter).sort({date:1,_id:1}).lean(),CommissionPayout.find(filter).sort({date:1,_id:1}).lean()]);return res.json({students:savedStudents,history:savedHistory,payouts:savedPayouts});}catch(e){console.error(e);return res.status(500).json({error:e.message||'Server error'});}};
+const filter=a?{$or:[{branchId:new mongoose.Types.ObjectId(a.branchId)},{branch:(await Branch.findById(a.branchId).lean())?.name}]}:{};const [savedStudents,savedHistory,savedPayouts,deletedStudents]=await Promise.all([Student.find(filter).sort({id:1}).lean(),CollectionHistory.find(filter).sort({date:1,_id:1}).lean(),CommissionPayout.find(filter).sort({date:1,_id:1}).lean(),DeletedStudent.find(filter).sort({deletedAt:-1}).lean()]);return res.json({students:savedStudents,history:savedHistory,payouts:savedPayouts,deletedStudents: a?[]:deletedStudents});}catch(e){console.error(e);return res.status(500).json({error:e.message||'Server error'});}};
