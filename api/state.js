@@ -50,7 +50,7 @@ module.exports=async(req,res)=>{res.setHeader('Access-Control-Allow-Origin','*')
 const requestedKey=String(req.headers['x-admin-action']||'pageOpen');
 const adminOverride=!!(a?.type==='branch' && String(req.headers['x-admin-password']||'') && (await adminOk(req,requestedKey)));
 if(req.method==='GET'){if(!a&&!main)return res.status(401).json({error:'Login required.'});if(main && !(await adminOk(req,'pageOpen')))return res.status(401).json({error:'Wrong admin password.'});let branchDoc=null;if(a?.type==='branch')branchDoc=await Branch.findById(a.branchId).lean();const filter=a?.type==='branch'?{$or:[{branchId:new mongoose.Types.ObjectId(a.branchId)},{branch:branchDoc?.name}]}:{};if(String(req.query?.sync||'')==='1'){return res.json({revision:await dataRevision(filter)});}const [students,history,payouts,deletedStudents]=await Promise.all([Student.find(filter).sort({id:1}).lean(),CollectionHistory.find(filter).sort({date:1,_id:1}).lean(),CommissionPayout.find(filter).sort({date:1,_id:1}).lean(),DeletedStudent.find(filter).sort({deletedAt:-1}).lean()]);return res.json({students,history,payouts,deletedStudents:a?[]:deletedStudents,revision:await dataRevision(filter),access:a?{type:'branch',branchId:a.branchId,branch:branchDoc?.name||a.branch||'',code:branchDoc?.code||a.code||'',username:a.username,permissions:a.permissions||{}}:{type:'main'}});}
-if(req.method!=='PUT')return res.status(405).json({error:'Method not allowed'});const key=requestedKey;if(a)return res.status(403).json({error:'Branch login is read-only. Only Main Admin can make changes.'});if(!(await adminOk(req,key)))return res.status(403).json({error:'Wrong password.'});const body=req.body||{};
+if(req.method!=='PUT')return res.status(405).json({error:'Method not allowed'});const key=requestedKey;if(!(await adminOk(req,key)))return res.status(403).json({error:'Wrong password.'});if(a&&!adminOverride)return res.status(403).json({error:'Editing is locked. Unlock with Main Admin password.'});const body=req.body||{};
 if(key==='studentPermanentDelete'){
  if(a)return res.status(403).json({error:'Only Main Admin can permanently delete students.'});
  const deleteId=String(body.deleteId||'').trim();
@@ -75,20 +75,56 @@ if(key==='studentRestore'){
 // Fast single-record writes: avoid replacing/deleting the entire dataset for every small update.
 if(body.fast==='studentUpsert'){
  const s=normS(body.student||{}); if(!s.id||!s.name)return res.status(400).json({error:'Student ID and name are required.'});
- let branchDoc=null; if(s.branchId){branchDoc=await Branch.findById(s.branchId).lean();} else if(s.branch){branchDoc=await Branch.findOne({name:s.branch}).lean();}
- if(branchDoc){s.branchId=branchDoc._id;s.branch=branchDoc.name;}
+ let branchDoc=null;
+ if(a){
+   branchDoc=await Branch.findById(a.branchId).lean();
+   if(!branchDoc||!branchDoc.active)return res.status(403).json({error:'Your branch is inactive or missing.'});
+   const requestedBranchId=String(s.branchId||'');
+   if(requestedBranchId&&requestedBranchId!==String(a.branchId))return res.status(403).json({error:'Student must belong to your branch.'});
+   const oldId=String(body.oldId||'').trim();
+   if(oldId){
+     const oldStudent=await Student.findOne({id:oldId}).lean();
+     if(oldStudent&&String(oldStudent.branchId||'')!==String(a.branchId))return res.status(403).json({error:'Student is outside your branch.'});
+   }
+   s.branchId=branchDoc._id;s.branch=branchDoc.name;
+ }else{
+   if(s.branchId)branchDoc=await Branch.findById(s.branchId).lean(); else if(s.branch)branchDoc=await Branch.findOne({name:s.branch}).lean();
+   if(branchDoc){s.branchId=branchDoc._id;s.branch=branchDoc.name;}
+ }
  const oldId=String(body.oldId||'').trim();
  if(oldId && oldId!==s.id){await Student.updateOne({id:oldId},{$set:{...s,id:s.id}},{runValidators:true});}else{await Student.updateOne({id:s.id},{$set:s},{upsert:true,runValidators:true});}
  return res.json({ok:true});
 }
-if(body.fast==='studentDelete'){const id=String(body.id||'').trim();if(!id)return res.status(400).json({error:'Student ID is required.'});const removed=await Student.findOne({id}).lean();if(removed)try{await DeletedStudent.create({...removed,deletedAt:new Date(),_id:undefined});}catch(e){}await Student.deleteOne({id});return res.json({ok:true});}
+if(body.fast==='studentDelete'){
+ const id=String(body.id||'').trim();if(!id)return res.status(400).json({error:'Student ID is required.'});
+ const removed=await Student.findOne({id}).lean();
+ if(a&&removed&&String(removed.branchId||'')!==String(a.branchId))return res.status(403).json({error:'Student is outside your branch.'});
+ if(removed)try{await DeletedStudent.create({...removed,deletedAt:new Date(),_id:undefined});}catch(e){}
+ await Student.deleteOne({id});return res.json({ok:true});
+}
 if(body.fast==='collectionUpsert'){
  const h=normH(body.history||{}); if(!h.date||!h.branch)return res.status(400).json({error:'Collection date and branch are required.'});
- const branchDoc=await Branch.findOne({name:h.branch}).lean(); if(branchDoc){h.branchId=branchDoc._id;h.branch=branchDoc.name;}
- const id=String(body.id||'').trim(); if(id)await CollectionHistory.updateOne({_id:id},{$set:h},{runValidators:true}); else await CollectionHistory.create(h);
+ let branchDoc;
+ if(a){
+   branchDoc=await Branch.findById(a.branchId).lean();
+   if(!branchDoc||!branchDoc.active)return res.status(403).json({error:'Your branch is inactive or missing.'});
+   h.branchId=branchDoc._id;h.branch=branchDoc.name;
+ }else{
+   branchDoc=await Branch.findOne({name:h.branch}).lean(); if(branchDoc){h.branchId=branchDoc._id;h.branch=branchDoc.name;}
+ }
+ const id=String(body.id||'').trim();
+ if(a&&id){
+   const existing=await CollectionHistory.findById(id).lean();
+   if(existing&&String(existing.branchId||'')!==String(a.branchId))return res.status(403).json({error:'Collection is outside your branch.'});
+ }
+ if(id)await CollectionHistory.updateOne({_id:id},{$set:h},{runValidators:true}); else await CollectionHistory.create(h);
  return res.json({ok:true});
 }
-if(body.fast==='collectionDelete'){const id=String(body.id||'').trim();if(!id)return res.status(400).json({error:'Collection ID is required.'});await CollectionHistory.deleteOne({_id:id});return res.json({ok:true});}
+if(body.fast==='collectionDelete'){
+ const id=String(body.id||'').trim();if(!id)return res.status(400).json({error:'Collection ID is required.'});
+ if(a){const existing=await CollectionHistory.findById(id).lean();if(existing&&String(existing.branchId||'')!==String(a.branchId))return res.status(403).json({error:'Collection is outside your branch.'});}
+ await CollectionHistory.deleteOne({_id:id});return res.json({ok:true});
+}
 if(!Array.isArray(body.students)||!Array.isArray(body.history))return res.status(400).json({error:'students and history must be arrays'});
 const students=body.students.map(normS).filter(s=>s.id&&s.name);const history=body.history.map(normH).filter(h=>h.date);const payouts=Array.isArray(body.payouts)?body.payouts.map(normP).filter(h=>h.date&&h.amount>0):[];const studentAction=key.startsWith('student');
 const collectionAction=key.startsWith('collection');
